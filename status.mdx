@@ -1,0 +1,21 @@
+---
+title: 'Status de Transação'
+description: 'Entenda o ciclo de vida e os status possíveis de um pagamento.'
+---
+
+Cada transação na plataforma passa por diversos estados desde sua criação até a finalização. Abaixo estão os status possíveis e o que cada um significa.
+
+<CardGroup cols={2}>
+  <Card title="PENDING" icon="clock">
+    O pedido foi criado e está aguardando pagamento ou processamento. Este é o estado inicial da maioria das transações.
+  </Card>
+  <Card title="APPROVED" icon="check-circle" color="#16a34a">
+    O pagamento foi confirmado com sucesso. O valor já foi capturado ou a transferência foi recebida.
+  </Card>
+  <Card title="FAILED" icon="circle-xmark" color="#dc2626">
+    Houve um erro no processamento do pagamento. Pode ser devido a saldo insuficiente, recusa do banco emissor ou falha técnica.
+  </Card>
+  <Card title="CANCELED" icon="ban" color="#ea580c">
+    O pedido foi cancelado manualmente pelo sistema ou pelo usuário antes de ser aprovado.
+  </Card>
+</CardGroup>

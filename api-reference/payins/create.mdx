@@ -1,0 +1,129 @@
+---
+title: 'Criar Pagamento'
+api: 'POST /payin'
+description: 'Gera um novo pedido com QR Code Pix ou Boleto.'
+---
+
+## Body Parameters
+
+<ParamField body="paymentMethod" type="string" required>
+  O método de pagamento escolhido.
+  Valores aceitos: `PIX`, `CREDIT_CARD`, `BOLETO`.
+</ParamField>
+
+<ParamField body="amount" type="integer" required>
+  O valor do pedido em centavos (ex: 10050 para R$ 100,50).
+</ParamField>
+
+<ParamField body="referenceId" type="string" required>
+  Um identificador único do seu sistema para este pedido.
+</ParamField>
+
+<ParamField body="webhookUrl" type="string">
+  URL que receberá notificações de mudança de status (Webhooks).
+</ParamField>
+
+<ParamField body="customer" type="object" required>
+  Dados do cliente pagador.
+  <Expandable title="Propriedades do Customer">
+    <ParamField body="name" type="string" required>Nome completo do cliente.</ParamField>
+    <ParamField body="email" type="string" required>Email do cliente.</ParamField>
+    <ParamField body="document" type="string" required>CPF ou CNPJ do cliente.</ParamField>
+    <ParamField body="phone" type="string">Telefone do cliente.</ParamField>
+    <ParamField body="address" type="object">
+      Endereço do cliente.
+      <Expandable title="Address">
+         <ParamField body="street" type="string">Rua.</ParamField>
+         <ParamField body="number" type="string">Número.</ParamField>
+         <ParamField body="neighborhood" type="string">Bairro.</ParamField>
+         <ParamField body="city" type="string">Cidade.</ParamField>
+         <ParamField body="state" type="string">Estado.</ParamField>
+         <ParamField body="zipCode" type="string">CEP.</ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="items" type="array">
+  Lista de itens do pedido.
+  <Expandable title="Item Object">
+    <ParamField body="title" type="string">Nome do item.</ParamField>
+    <ParamField body="quantity" type="number">Quantidade.</ParamField>
+    <ParamField body="unitPrice" type="number">Preço unitário em centavos.</ParamField>
+    <ParamField body="tangible" type="boolean">Se é um produto físico.</ParamField>
+  </Expandable>
+</ParamField>
+
+## Exemplo de Requisição
+
+<CodeGroup>
+
+```json JSON
+{
+  "paymentMethod": "PIX",
+  "amount": 10050,
+  "referenceId": "pedido_12345",
+  "webhookUrl": "https://seu-site.com/webhook",
+  "customer": {
+    "name": "João da Silva",
+    "email": "joao@email.com",
+    "document": "12345678900",
+    "phone": "11999998888",
+    "address": {
+      "street": "Rua das Flores",
+      "number": "100",
+      "neighborhood": "Centro",
+      "city": "São Paulo",
+      "state": "SP",
+      "zipCode": "01001000"
+    }
+  },
+  "items": [
+    {
+      "title": "Produto Exemplo",
+      "quantity": 1,
+      "unitPrice": 10050,
+      "tangible": true
+    }
+  ]
+}
+```
+
+</CodeGroup>
+
+## Resposta (201 Created)
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "externalId": "tx_987654321",
+  "referenceId": "pedido_12345",
+  "status": "PENDING",
+  "amount": 10050,
+  "paymentMethod": "PIX",
+  "pix": {
+    "qrcode": "00020126580014BR.GOV.BCB.PIX0136123e4567-e89b-12d3-a456-426614174000520400005303986540510.005802BR5913Cicrano de Tal6008BRASILIA62070503***6304E2CA"
+  },
+  "createdAt": "2023-10-27T10:00:00Z"
+}
+```
+
+<ResponseField name="id" type="string">
+  O ID único do pedido gerado pela plataforma.
+</ResponseField>
+
+<ResponseField name="externalId" type="string">
+  ID da transação no gateway processador.
+</ResponseField>
+
+<ResponseField name="referenceId" type="string">
+  Seu ID de referência.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Status inicial do pedido.
+</ResponseField>
+
+<ResponseField name="pix" type="object">
+  Dados do Pix (qrcode).
+</ResponseField>

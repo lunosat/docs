@@ -1,0 +1,55 @@
+---
+title: 'Listar Pedidos'
+api: 'GET /payin'
+---
+
+Retorna uma lista paginada dos pedidos da empresa autenticada.
+
+## Query Parameters
+
+<ParamField query="limit" type="number" default="10">
+  Número máximo de registros a retornar.
+</ParamField>
+
+<ParamField query="page" type="number" default="1">
+  Número da página para navegação.
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filtrar por status do pedido (ex: `APPROVED`).
+</ParamField>
+
+<ParamField query="startDate" type="string">
+  Filtrar pedidos criados a partir desta data (ISO 8601).
+</ParamField>
+
+<ParamField query="endDate" type="string">
+  Filtrar pedidos criados até esta data (ISO 8601).
+</ParamField>
+
+## Exemplo de Requisição
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET "https://api.exemplo.com/payin?limit=20&status=APPROVED" \
+  -H "x-api-key: YOUR_PUBLIC_KEY" \
+  -H "x-api-secret: YOUR_SECRET_KEY"
+```
+
+</CodeGroup>
+
+## Resposta
+
+<ResponseField name="data" type="array">
+  Lista de objetos `Payin`.
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Metadados de paginação.
+  <Expandable title="Meta">
+    <ResponseField name="total" type="number">Total de registros encontrados.</ResponseField>
+    <ResponseField name="page" type="number">Página atual.</ResponseField>
+    <ResponseField name="perPage" type="number">Registros por página.</ResponseField>
+  </Expandable>
+</ResponseField>

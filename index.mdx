@@ -1,97 +1,26 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: 'Introdução'
+description: 'Bem-vindo à documentação da API de Pagamentos'
 ---
 
-## Setting up
+Nossa API permite processar pagamentos de forma simples, segura e escalável. Suportamos múltiplos métodos de pagamento, incluindo PIX, Cartão de Crédito e Boleto.
 
-Get your documentation site up and running in minutes.
+## Autenticação
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+Todas as requisições API devem ser autenticadas usando chaves de API. Você pode encontrar suas chaves no dashboard da sua conta.
 
-## Make it yours
+<Warning>
+  Nunca exponha seu `x-api-secret` em aplicações client-side (frontend). Ele deve ser usado apenas em comunicações server-to-server.
+</Warning>
 
-Design a docs site that looks great and empowers your users.
+### Headers Obrigatórios
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+Para autenticar suas requisições, inclua os seguintes headers em cada chamada:
 
-## Create beautiful pages
+<ParamField header="x-api-key" type="string" required>
+  Sua chave pública. Usada para identificar sua conta.
+</ParamField>
 
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<ParamField header="x-api-secret" type="string" required>
+  Seu segredo de API. Usado para assinar e autorizar as requisições.
+</ParamField>

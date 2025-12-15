@@ -1,0 +1,45 @@
+---
+title: 'Notificações (Webhooks)'
+description: 'Enviado para sua URL a cada mudança de status.'
+---
+
+Webhooks são a melhor maneira de manter seu sistema sincronizado com as atualizações de pagamento.
+
+## Payload do Webhook
+
+Enviamos um JSON no corpo da requisição contendo os detalhes do evento.
+
+```json
+{
+  "event": "PAYMENT_STATUS_CHANGED",
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "externalId": "tx_987654321",
+    "referenceId": "pedido_12345",
+    "status": "APPROVED",
+    "amount": 10050,
+    "paymentMethod": "PIX",
+    "processedAt": "2023-10-27T10:05:00Z"
+  }
+}
+```
+
+### Campos do Payload
+
+<ResponseField name="event" type="string">
+  O tipo do evento (ex: `PAYMENT_STATUS_CHANGED`).
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  O objeto contendo os dados atualizados da transação.
+  <Expandable title="Propriedades de data">
+    <ResponseField name="id" type="string">O ID interno do pedido.</ResponseField>
+    <ResponseField name="externalId" type="string">O ID externo da transação.</ResponseField>
+    <ResponseField name="referenceId" type="string">Sua referência.</ResponseField>
+    <ResponseField name="status" type="string">O novo status do pedido.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Resposta Esperada
+
+Seu servidor deve responder com um status HTTP `200 OK`.
