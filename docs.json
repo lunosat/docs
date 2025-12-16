@@ -2,6 +2,9 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Payments API",
+  "api": {
+    "baseUrl": "https://api.legacyecom.com.br"
+  },
   "colors": {
     "primary": "#0F0F0F",
     "light": "#A1A1AA",
@@ -32,6 +35,12 @@
               "api-reference/payins/create",
               "api-reference/payins/get",
               "api-reference/payins/list"
+            ]
+          },
+          {
+            "group": "Saques",
+            "pages": [
+              "api-reference/payouts/create"
             ]
           }
         ]

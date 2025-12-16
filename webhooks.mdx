@@ -1,13 +1,14 @@
 ---
-title: 'Notificações (Webhooks)'
-description: 'Enviado para sua URL a cada mudança de status.'
+title: 'Webhooks'
+description: 'Receba notificações automáticas de mudança de status.'
 ---
 
-Webhooks são a melhor maneira de manter seu sistema sincronizado com as atualizações de pagamento.
+Webhooks são a melhor maneira de manter seu sistema sincronizado com as atualizações de pagamento e saques.
+Sempre que o status de uma transação mudar, nosso sistema enviará uma requisição `POST` para a URL cadastrada.
 
-## Payload do Webhook
+## Payins (Pagamentos)
 
-Enviamos um JSON no corpo da requisição contendo os detalhes do evento.
+Enviamos um JSON no corpo da requisição contendo os detalhes do evento de pagamento.
 
 ```json
 {
@@ -24,7 +25,7 @@ Enviamos um JSON no corpo da requisição contendo os detalhes do evento.
 }
 ```
 
-### Campos do Payload
+### Campos do Payload (Payin)
 
 <ResponseField name="event" type="string">
   O tipo do evento (ex: `PAYMENT_STATUS_CHANGED`).
@@ -40,6 +41,52 @@ Enviamos um JSON no corpo da requisição contendo os detalhes do evento.
   </Expandable>
 </ResponseField>
 
+
+## Payouts (Saques)
+
+Enviamos um JSON com os detalhes da atualização do saque.
+
+```json
+{
+  "id": "a1b2c3d4-...",
+  "externalId": "tx_citrex_98765...",
+  "status": "APPROVED",
+  "amount": 5000,
+  "referenceId": "ref_123456"
+}
+```
+
+### Campos do Payload (Payout)
+
+<ResponseField name="id" type="string">
+  O ID interno do saque.
+</ResponseField>
+
+<ResponseField name="externalId" type="string">
+  ID da transação no processador bancário.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Novo status da transação.
+</ResponseField>
+
+<ResponseField name="amount" type="integer">
+  Valor em centavos.
+</ResponseField>
+
+<ResponseField name="referenceId" type="string">
+  Seu ID de referência enviado na criação.
+</ResponseField>
+
+### Status Possíveis (Payout)
+
+| Status | Descrição |
+| :--- | :--- |
+| `PENDING` | O pagamento foi criado e está sendo processado pelo banco. |
+| `APPROVED` | O pagamento foi confirmado e o dinheiro enviado. |
+| `FAILED` | O pagamento falhou ou foi rejeitado. O saldo é estornado automaticamente. |
+
+
 ## Resposta Esperada
 
-Seu servidor deve responder com um status HTTP `200 OK`.
+Seu servidor deve responder com um status HTTP `200 OK` para confirmar o recebimento do webhook. Caso contrário, nosso sistema tentará reenviar a notificação.

@@ -1,0 +1,79 @@
+---
+title: 'Criar Payout'
+api: 'POST /payout'
+description: 'Solicitação de Saque'
+---
+
+## Body Parameters
+
+<ParamField body="amount" type="integer" required>
+  Valor em centavos (inteiro). Ex: 5000 = R$ 50,00.
+</ParamField>
+
+<ParamField body="pixKey" type="string" required>
+  A chave Pix de destino.
+</ParamField>
+
+<ParamField body="pixKeyType" type="string" required>
+  Tipo da chave. 
+  Valores aceitos: `CPF`, `CNPJ`, `EMAIL`, `PHONE`, `EVP`.
+</ParamField>
+
+<ParamField body="beneficiaryName" type="string">
+  Nome do beneficiário (recomendado para validação).
+</ParamField>
+
+<ParamField body="beneficiaryDocument" type="string">
+  CPF/CNPJ do beneficiário (apenas números).
+</ParamField>
+
+<ParamField body="webhookUrl" type="string">
+  URL para receber notificações de status.
+</ParamField>
+
+<ParamField body="referenceId" type="string" required>
+  Seu ID interno único para controle.
+</ParamField>
+
+## Exemplo de Requisição
+
+<CodeGroup>
+```bash cURL
+curl --request POST \
+  --url https://api.legacyecom.com.br/payout \
+  --header 'Content-Type: application/json' \
+  --header 'x-api-key: YOUR_API_KEY' \
+  --header 'x-api-secret: YOUR_API_SECRET' \
+  --data '{
+  "amount": 5000,
+  "pixKey": "user@example.com",
+  "pixKeyType": "EMAIL",
+  "beneficiaryName": "João da Silva",
+  "beneficiaryDocument": "12345678900",
+  "webhookUrl": "https://seu-site.com/webhook/payout",
+  "referenceId": "ref_123456"
+}'
+```
+</CodeGroup>
+
+## Resposta de Sucesso (201 Created)
+
+```json
+{
+  "id": "a1b2c3d4-...",
+  "status": "PENDING",
+  "amount": "5000",
+  "currency": "BRL",
+  "externalId": "tx_98765...",
+  "pixKey": "user@example.com",
+  "referenceId": "ref_123456",
+  "createdAt": "2025-12-16T20:00:00.000Z"
+}
+```
+
+## Webhooks (Notificações)
+
+O sistema enviará uma requisição `POST` para a `webhookUrl` informada sempre que houver atualização de status.
+
+Para detalhes sobre o payload e status, consulte o guia de [Webhooks](/webhooks).
+
