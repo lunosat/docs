@@ -1,14 +1,17 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Payments API",
+  "name": "PagueOneIP",
   "api": {
-    "baseUrl": "https://api.legacyecom.com.br"
+    "baseUrl": "https://api.pagueoneip.com.br"
+  },
+  "modeToggle": {
+    "default": "light",
+    "isHidden": true
   },
   "colors": {
     "primary": "#0F0F0F",
-    "light": "#A1A1AA",
-    "dark": "#000000"
+    "light": "#A1A1AA"
   },
   "favicon": "/favicon.png",
   "navigation": {
@@ -48,7 +51,8 @@
     ]
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/images/logo-completa.png",
+    "dark": "/images/logo-completa.png",
+    "href": "https://pagueoneip.com.br"
   }
 }
