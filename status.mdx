@@ -1,21 +1,44 @@
 ---
-title: 'Status de Transação'
-description: 'Entenda o ciclo de vida e os status possíveis de um pagamento.'
+title: 'Status e Ciclo de Vida'
+description: 'Entenda os estados das transações e como gerenciá-los.'
 ---
 
-Cada transação na plataforma passa por diversos estados desde sua criação até a finalização. Abaixo estão os status possíveis e o que cada um significa.
+Para garantir a consistência financeira, utilizamos uma máquina de estados rigorosa. Uma transação só pode mover-se em uma direção (ex: de Pendente para Aprovado), nunca retroceder.
+
+## Ciclo de Vida Visual
+
+<div className="flex justify-center my-8">
+```mermaid
+graph LR
+    P[PENDING] -->|Pagamento Confirmado| A[APPROVED]
+    P -->|Tempo Expirou / Recusado| F[FAILED]
+    P -->|Cancelamento Manual| C[CANCELED]
+    
+    style P fill:#fbbf24,stroke:#d97706,color:#fff
+    style A fill:#22c55e,stroke:#166534,color:#fff
+    style F fill:#ef4444,stroke:#991b1b,color:#fff
+    style C fill:#64748b,stroke:#334155,color:#fff
+```
+</div>
+
+## Glossário de Status
+
+| Status | Ícone | Significado para Payin (Entrada) | Significado para Payout (Saída) |
+| :--- | :---: | :--- | :--- |
+| `PENDING` | <Icon icon="clock" color="#fbbf24" /> | Aguardando pagamento do cliente. O saldo **não** está disponível. | Solicitação criada, aguardando processamento bancário. Valor bloqueado. |
+| `APPROVED` | <Icon icon="check-circle" color="#22c55e" /> | Pagamento recebido e confirmado. O valor foi creditado no seu saldo. | Transferência realizada com sucesso para a conta de destino. |
+| `FAILED` | <Icon icon="circle-xmark" color="#ef4444" /> | Erro no pagamento (cartão recusado) ou boleto/pix expirado. | Falha no envio (chave inválida ou erro bancário). Saldo estornado. |
+| `CANCELED` | <Icon icon="ban" color="#64748b" /> | Cobrança cancelada antes do pagamento. | N/A (Saques não costumam ser cancelados manualmente após envio). |
+
+---
+
+## Tratamento de Erros Comuns
 
 <CardGroup cols={2}>
-  <Card title="PENDING" icon="clock">
-    O pedido foi criado e está aguardando pagamento ou processamento. Este é o estado inicial da maioria das transações.
+  <Card title="Timeout de Pix" icon="hourglass-end">
+    QRCodes Pix expiram em **24 horas** por padrão. Se não pago, o status muda automaticamente para `FAILED`.
   </Card>
-  <Card title="APPROVED" icon="check-circle" color="#16a34a">
-    O pagamento foi confirmado com sucesso. O valor já foi capturado ou a transferência foi recebida.
-  </Card>
-  <Card title="FAILED" icon="circle-xmark" color="#dc2626">
-    Houve um erro no processamento do pagamento. Pode ser devido a saldo insuficiente, recusa do banco emissor ou falha técnica.
-  </Card>
-  <Card title="CANCELED" icon="ban" color="#ea580c">
-    O pedido foi cancelado manualmente pelo sistema ou pelo usuário antes de ser aprovado.
+  <Card title="Cartão Recusado" icon="credit-card">
+    Se o status for para `FAILED` em cartão de crédito, geralmente é falta de saldo ou bloqueio do banco emissor.
   </Card>
 </CardGroup>

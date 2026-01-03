@@ -1,92 +1,113 @@
 ---
 title: 'Webhooks'
-description: 'Receba notificações automáticas de mudança de status.'
+description: 'Receba notificações em tempo real e automatize seu negócio.'
 ---
 
-Webhooks são a melhor maneira de manter seu sistema sincronizado com as atualizações de pagamento e saques.
-Sempre que o status de uma transação mudar, nosso sistema enviará uma requisição `POST` para a URL cadastrada.
+Webhooks são gatilhos HTTP automáticos que enviamos para o seu servidor sempre que algo importante acontece, como quando um Pix é pago ou um saque é processado.
 
-## Payins (Pagamentos)
+## Como Funciona
 
-Enviamos um JSON no corpo da requisição contendo os detalhes do evento de pagamento.
+<div className="flex justify-center my-8">
+```mermaid
+sequenceDiagram
+    participant Cliente
+    participant PagueOne
+    participant SeuServidor
+
+    Cliente->>PagueOne: Realiza Pagamento (Pix/Cartão)
+    PagueOne-->>Cliente: Confirmação Visual
+    PagueOne->>PagueOne: Processa Transação
+    PagueOne->>SeuServidor: POST /webhook (Payload JSON)
+    SeuServidor-->>PagueOne: 200 OK
+    Note right of SeuServidor: Seu sistema libera o pedido<br/>para o cliente.
+```
+</div>
+
+## Configuração
+
+Você deve configurar sua **Webhook URL** no momento de criar a transação (`payin` ou `payout`).
+
+<Warning>
+  **Requisito de Confiabilidade:**
+  Seu endpoint DEVE responder com **HTTP 200 OK** em menos de 5 segundos. Caso contrário, consideraremos falha e tentaremos reenviar a notificação (retry) exponencialmente.
+</Warning>
+
+## Payload de Eventos
+
+### Payin (Pagamento Recebido)
+
+Quando um cliente paga, você recebe este payload:
 
 ```json
 {
   "event": "PAYMENT_STATUS_CHANGED",
   "data": {
     "id": "550e8400-e29b-41d4-a716-446655440000",
-    "externalId": "tx_987654321",
     "referenceId": "pedido_12345",
     "status": "APPROVED",
     "amount": 10050,
     "paymentMethod": "PIX",
+    "createdAt": "2023-10-27T10:00:00Z",
     "processedAt": "2023-10-27T10:05:00Z"
   }
 }
 ```
 
-### Campos do Payload (Payin)
+### Payout (Saque Processado)
 
-<ResponseField name="event" type="string">
-  O tipo do evento (ex: `PAYMENT_STATUS_CHANGED`).
-</ResponseField>
-
-<ResponseField name="data" type="object">
-  O objeto contendo os dados atualizados da transação.
-  <Expandable title="Propriedades de data">
-    <ResponseField name="id" type="string">O ID interno do pedido.</ResponseField>
-    <ResponseField name="externalId" type="string">O ID externo da transação.</ResponseField>
-    <ResponseField name="referenceId" type="string">Sua referência.</ResponseField>
-    <ResponseField name="status" type="string">O novo status do pedido.</ResponseField>
-  </Expandable>
-</ResponseField>
-
-
-## Payouts (Saques)
-
-Enviamos um JSON com os detalhes da atualização do saque.
+Quando uma transferência solicitada por você é finalizada:
 
 ```json
 {
-  "id": "a1b2c3d4-...",
-  "externalId": "tx_98765...",
-  "status": "APPROVED",
-  "amount": 5000,
-  "referenceId": "ref_123456"
+  "event": "PAYOUT_STATUS_CHANGED",
+  "data": {
+    "id": "a1b2c3d4-...",
+    "referenceId": "saque_001",
+    "status": "APPROVED",
+    "amount": 5000,
+    "pixKey": "user@email.com",
+    "processedAt": "2023-10-27T14:30:00Z"
+  }
 }
 ```
 
-### Campos do Payload (Payout)
+## Exemplo de Implementação
 
-<ResponseField name="id" type="string">
-  O ID interno do saque.
-</ResponseField>
+Recebendo o webhook com segurança em Node.js (Express).
 
-<ResponseField name="externalId" type="string">
-  ID da transação no processador bancário.
-</ResponseField>
+```javascript
+const express = require('express');
+const app = express();
 
-<ResponseField name="status" type="string">
-  Novo status da transação.
-</ResponseField>
+app.use(express.json());
 
-<ResponseField name="amount" type="integer">
-  Valor em centavos.
-</ResponseField>
+app.post('/webhook', (req, res) => {
+  const { event, data } = req.body;
 
-<ResponseField name="referenceId" type="string">
-  Seu ID de referência enviado na criação.
-</ResponseField>
+  console.log(`Recebido evento: ${event} para ID: ${data.referenceId}`);
 
-### Status Possíveis (Payout)
+  if (event === 'PAYMENT_STATUS_CHANGED') {
+    if (data.status === 'APPROVED') {
+      // TODO: Liberar acesso do usuário / Enviar produto
+      console.log(`Pagamento ${data.amount} aprovado!`);
+    }
+  }
 
-| Status | Descrição |
-| :--- | :--- |
-| `PENDING` | O pagamento foi criado e está sendo processado pelo banco. |
-| `APPROVED` | O pagamento foi confirmado e o dinheiro enviado. |
-| `FAILED` | O pagamento falhou ou foi rejeitado. O saldo é estornado automaticamente. |
+  // Importante: Responder 200 OK rapidamente
+  res.status(200).send('OK');
+});
 
+app.listen(3000, () => console.log('Webhook server running on port 3000'));
+```
 
-## Resposta Esperada
+## Boas Práticas
 
-Seu servidor deve responder com um status HTTP `200 OK` para confirmar o recebimento do webhook. Caso contrário, nosso sistema tentará reenviar a notificação.
+<AccordionGroup>
+  <Accordion title="Idempotência (Evite Duplicidade)">
+    Webhooks podem ser entregues mais de uma vez devido a retries de rede. 
+    **Sempre verifique se a transação já foi processada** no seu banco de dados antes de liberar créditos novamente. Utilize o `id` da transação como chave de idempotência.
+  </Accordion>
+  <Accordion title="Segurança">
+    Embora a URL seja pública, recomendamos que você valide se o evento realmente pertence a um pedido existente no seu sistema através do `referenceId` antes de tomar qualquer ação.
+  </Accordion>
+</AccordionGroup>

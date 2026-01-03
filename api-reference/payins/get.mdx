@@ -1,43 +1,50 @@
 ---
-title: 'Consultar Status'
+title: 'Consultar Cobrança'
 api: 'GET /payin/{id}'
+description: 'Busque os detalhes de uma transação específica.'
 ---
 
-Recupera os detalhes atualizados de um pedido específico.
+Recupere todas as informações de uma cobrança, incluindo status atualizado, taxas e valores líquidos.
 
-## Path Parameters
+## Parâmetros
 
 <ParamField path="id" type="string" required>
-  Identificador do pedido. Aceita UUID interno, External ID ou Reference ID.
+  Identificador da cobrança.
+  
+  Pode ser:
+  - Nosso ID interno (`uuid`)
+  - O ID externo do adquirente (`externalId`)
+  - Seu ID de referência (`referenceId`)
 </ParamField>
 
-## Exemplo de Requisição
+## Resposta
 
 <CodeGroup>
-
-```bash cURL
-curl -X GET https://api.pagueoneip.com.br/payin/pedido_12345 \
-  -H "x-api-key: YOUR_PUBLIC_KEY" \
-  -H "x-api-secret: YOUR_SECRET_KEY"
-```
-
-</CodeGroup>
-
-## Resposta (200 OK)
-
-```json
+```json 200 OK
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "externalId": "tx_987654321",
-  "referenceId": "pedido_12345",
+  "id": "fc1a3b2c-...",
   "status": "APPROVED",
-  "amount": 10050,
+  "amount": 10000,
+  "netAmount": 9750,
+  "fees": 250,
   "paymentMethod": "PIX",
-  "createdAt": "2023-10-27T10:00:00Z",
-  "updatedAt": "2023-10-27T10:05:00Z"
+  "referenceId": "pedido_123",
+  "externalId": "tx_987654321",
+  "companyId": "comp_123",
+  "createdAt": "2024-01-01T10:00:00Z",
+  "updatedAt": "2024-01-01T10:00:05Z",
+  "customer": {
+    "name": "Cliente Exemplo",
+    "document": "***.123.456-**"
+  }
 }
 ```
 
-<ResponseField name="id" type="string">ID do pedido.</ResponseField>
-<ResponseField name="status" type="string">Status atual (APPROVED, PENDING, etc).</ResponseField>
-<ResponseField name="updatedAt" type="string">Data da última atualização.</ResponseField>
+```json 404 Not Found
+{
+  "statusCode": 404,
+  "message": "Payin not found",
+  "error": "Not Found"
+}
+```
+</CodeGroup>

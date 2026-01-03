@@ -1,55 +1,34 @@
 ---
-title: 'Listar Pedidos'
+title: 'Listar Cobranças'
 api: 'GET /payin'
+description: 'Liste todas as cobranças da sua conta.'
 ---
 
-Retorna uma lista paginada dos pedidos da empresa autenticada.
+Retorna um array com as cobranças criadas pela sua empresa, ordenadas das mais recentes para as mais antigas.
 
-## Query Parameters
-
-<ParamField query="limit" type="number" default="10">
-  Número máximo de registros a retornar.
-</ParamField>
-
-<ParamField query="page" type="number" default="1">
-  Número da página para navegação.
-</ParamField>
-
-<ParamField query="status" type="string">
-  Filtrar por status do pedido (ex: `APPROVED`).
-</ParamField>
-
-<ParamField query="startDate" type="string">
-  Filtrar pedidos criados a partir desta data (ISO 8601).
-</ParamField>
-
-<ParamField query="endDate" type="string">
-  Filtrar pedidos criados até esta data (ISO 8601).
-</ParamField>
-
-## Exemplo de Requisição
-
-<CodeGroup>
-
-```bash cURL
-curl -X GET "https://api.pagueoneip.com.br/payin?limit=20&status=APPROVED" \
-  -H "x-api-key: YOUR_PUBLIC_KEY" \
-  -H "x-api-secret: YOUR_SECRET_KEY"
-```
-
-</CodeGroup>
+<Note>
+  A listagem é filtrada automaticamente pela Chave de API utilizada na requisição. Você só verá cobranças pertencentes à sua conta.
+</Note>
 
 ## Resposta
 
-<ResponseField name="data" type="array">
-  Lista de objetos `Payin`.
-</ResponseField>
-
-<ResponseField name="meta" type="object">
-  Metadados de paginação.
-  <Expandable title="Meta">
-    <ResponseField name="total" type="number">Total de registros encontrados.</ResponseField>
-    <ResponseField name="page" type="number">Página atual.</ResponseField>
-    <ResponseField name="perPage" type="number">Registros por página.</ResponseField>
-  </Expandable>
-</ResponseField>
+<CodeGroup>
+```json 200 OK
+[
+  {
+    "id": "fc1a3b2c-...",
+    "status": "APPROVED",
+    "amount": 10000,
+    "referenceId": "pedido_123",
+    "createdAt": "2024-01-01T12:00:00Z"
+  },
+  {
+    "id": "ab2c3d4e-...",
+    "status": "PENDING",
+    "amount": 5000,
+    "referenceId": "pedido_122",
+    "createdAt": "2024-01-01T11:55:00Z"
+  }
+]
+```
+</CodeGroup>

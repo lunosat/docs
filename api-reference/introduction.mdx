@@ -1,33 +1,52 @@
 ---
-title: 'Introduction'
-description: 'Example section for showcasing API endpoints'
+title: 'Introdução e Autenticação'
+description: 'Comece a integrar em minutos, não em dias.'
 ---
 
+## Bem-vindo
+
+Esta API foi construída seguindo os padrões **RESTful**, o que significa que ela possui endpoints previsíveis, usa códigos de resposta HTTP padrão e aceita/retorna JSON.
+
 <Note>
-  If you're not looking to build API reference documentation, you can delete
-  this section by removing the api-reference folder.
+  Todas as requisições, sem exceção, devem conter o header `Content-Type: application/json`.
 </Note>
 
-## Welcome
+---
 
-There are two ways to build API documentation: [OpenAPI](https://mintlify.com/docs/api-playground/openapi/setup) and [MDX components](https://mintlify.com/docs/api-playground/mdx/configuration). For the starter kit, we are using the following OpenAPI specification.
+## Autenticação
 
-<Card
-  title="Plant Store Endpoints"
-  icon="leaf"
-  href="https://github.com/mintlify/starter/blob/main/api-reference/openapi.json"
->
-  View the OpenAPI specification file
-</Card>
+A segurança é nossa prioridade. Utilizamos um sistema de **duplo segredo** nos headers para garantir que apenas sua aplicação possa se comunicar conosco.
 
-## Authentication
+<Warning>
+  **Importante:** Essa API deve ser consumida exclusivamente **Server-to-Server**. Requisições vindas de navegadores (browsers) serão bloqueadas automaticamente.
+</Warning>
 
-All API endpoints are authenticated using Bearer tokens and picked up from the specification file.
+Para se autenticar, você deve incluir as seguintes chaves no *Header* de cada requisição:
 
-```json
-"security": [
-  {
-    "bearerAuth": []
-  }
-]
+<ParamField header="x-api-key" type="string" required>
+  Sua chave **Pública**. Identifica sua empresa.
+</ParamField>
+
+<ParamField header="x-api-secret" type="string" required>
+  Sua chave **Secreta**. Nunca a exponha no frontend.
+</ParamField>
+
+### Exemplo de Header
+
+<CodeGroup>
+```bash cURL
+curl --request GET \
+  --url https://api.pagueoneip.com.br/payin \
+  --header 'Content-Type: application/json' \
+  --header 'x-api-key: pk_live_123456789' \
+  --header 'x-api-secret: sk_live_987654321'
 ```
+
+```javascript Node.js
+const headers = {
+  'Content-Type': 'application/json',
+  'x-api-key': 'pk_live_123456789',
+  'x-api-secret': 'sk_live_987654321'
+};
+```
+</CodeGroup>
