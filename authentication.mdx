@@ -1,7 +1,7 @@
 ---
-title: 'Autenticação'
-description: 'Guia de como se autenticar na API da Legacy usando suas chaves de produção.'
-icon: 'lock'
+title: "Autenticação"
+description: "Guia de como se autenticar na API da Legacy usando suas chaves de produção."
+icon: "lock"
 ---
 
 Para acessar qualquer endpoint privado da nossa API, sua aplicação precisará estar devidamente autenticada. A Legacy suporta duas formas de integração, sendo o **Basic Auth** altamente recomendado para garantias de segurança e performance.
@@ -9,6 +9,7 @@ Para acessar qualquer endpoint privado da nossa API, sua aplicação precisará 
 ### Como funciona
 
 Sua conta na plataforma Legacy provê duas chaves de acesso, disponíveis na aba "Integrações" do Dashboard da Empresa:
+
 - **Public Key**: Uma chave projetada para identificação, no formato `pk_live_xxxx...`
 - **Secret Key**: Uma chave projetada para autorização, no formato `sk_live_yyyy...`
 
@@ -22,11 +23,9 @@ Para invocar as APIs como `POST /payin` ou `POST /payout`, você deve informar o
 
 ### Exemplo
 
-Codifique sua chave Pública e Secreta em [Base64](https://www.base64encode.org/):
-`pk_live_xxxxxxxx : sk_live_yyyyyyyy`
+Codifique sua chave Pública e Secreta em [Base64](https://www.base64encode.org/): `pk_live_xxxxxxxx : sk_live_yyyyyyyy`
 
-**1.** Concatene as duas chaves com `:` (dois pontos) entre elas.
-**2.** Aplique base64 no resultado.
+**1.** Concatene as duas chaves com `:` (dois pontos) entre elas. **2.** Aplique base64 no resultado.
 
 ```bash
 Authorization: Basic cGtfbGl2ZV94eHh4eHh4eDpzaz9saXZlX3l5eXl5eXl5eQ==
@@ -36,7 +35,7 @@ Este é o padrão que você colocará na chamada:
 
 <CodeGroup>
 
-```javascript /payin
+```javascript NodeJS
 import axios from 'axios';
 
 const publicKey = 'pk_live_xxxxxx';
@@ -50,7 +49,8 @@ axios.post('https://api.legacyecom.com.br/payin', payload, {
 });
 ```
 
-```php /payin
+
+```php PHP
 $publicKey = 'pk_live_xxxxxx';
 $secretKey = 'sk_live_yyyyyy';
 $encodedCredentials = base64_encode("{$publicKey}:{$secretKey}");
@@ -69,7 +69,7 @@ $headers = [
 
 ## 🔄 Opção de Fallback (Sistemas Legados)
 
-Se você já possuía uma integração via `x-api-key` nas antigas arquiteturas, manteremos total compatibilidade do seu ambiente em produção. 
+Se você já possuía uma integração via `x-api-key` nas antigas arquiteturas, manteremos total compatibilidade do seu ambiente em produção.
 
 Basta enviar o par de chaves nos respectivos Headers HTTP:
 
@@ -78,4 +78,4 @@ x-api-key: pk_live_xxxxxx
 x-api-secret: sk_live_yyyyyy
 ```
 
-*Nota: Recomendamos planejar a migração de seus sistemas para o Basic Auth para maior performance.*
+_Nota: Recomendamos planejar a migração de seus sistemas para o Basic Auth para maior performance._
