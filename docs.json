@@ -3,7 +3,7 @@
   "theme": "mint",
   "name": "Legacy API",
   "api": {
-    "baseUrl": "https://api.legacy.com.br"
+    "baseUrl": "https://api.legacyecom.com.br"
   },
   "modeToggle": {
     "default": "light",
@@ -62,6 +62,6 @@
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/light.svg",
-    "href": "https://legacy.com.br"
+    "href": "https://legacyecom.com.br"
   }
 }

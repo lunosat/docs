@@ -1,6 +1,6 @@
 ---
 title: 'Criar Payin'
-api: 'POST /payin'
+api: 'POST https://api.legacyecom.com.br/payin'
 description: 'Cria uma nova requisição de pagamento (Payin) usando Cartão de Crédito, Boleto ou PIX.'
 ---
 
@@ -123,7 +123,7 @@ A resposta varia ligeiramente dependendo do método de pagamento escolhido. A AP
   "createdAt": "2026-03-02T12:05:00.000Z",
   "boleto": {
     "barcode": "34191.09008 00000.000004 00000.000006 1 800000000010000",
-    "url": "https://adquirente.legacy.com.br/boleto/12346"
+    "url": "https://adquirente.legacyecom.com.br/boleto/12346"
   }
 }
 ```
