@@ -1,80 +1,65 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: 'Início Rápido'
+description: 'Sua primeira chamada na API da Legacy em minutos.'
+icon: 'rocket'
 ---
 
-## Get started in three steps
+Para integrar a Legacy, você precisa de uma conta ativa com o status de **KYC Aprovado**.
 
-Get your documentation site running locally and make your first customization.
+## 1. Obtenha suas chaves de API
 
-### Step 1: Set up your local environment
+Acesse o Dashboard da Legacy e navegue até a seção de Integrações.
+Lá você poderá gerar suas chaves de ambiente de Produção:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+* `pk_live_...` (Sua chave Pública)
+* `sk_live_...` (Sua chave Secreta)
 
-### Step 2: Deploy your changes
+<Warning>
+**Guarde sua Secret Key (`sk_live_...`) com segurança!** Ela será mostrada apenas uma vez na criação.
+</Warning>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+## 2. Autentique-se na API
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+Por padrão, você fará as chamadas para a nossa API `https://api.legacy.com.br` enviando o cabeçalho HTTP de autorização.
+Leia o guia de [Autenticação](/authentication) detalhado para mais exemplos.
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+## 3. Realize sua primeira cobrança PIX
 
-### Step 3: Go live
+Este é um exemplo simples de como gerar um PIX de $100,00 reais (lembre-se, os valores devem ser enviados em **centavos** - portanto, enviaremos `10000`).
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+```json
+POST /payin
+Content-Type: application/json
+Authorization: Basic base64(pk_live_xxxx:sk_live_yyyy)
 
-## Next steps
+{
+  "paymentMethod": "PIX",
+  "amount": 10000,
+  "referenceId": "meu-pedido-1234",
+  "isPhysicalProduct": false,
+  "payerIp": "200.100.50.3",
+  "customer": {
+    "name": "Maria Silva",
+    "document": "83416281085",
+    "email": "maria@email.com",
+    "phone": "5511999999999",
+    "address": {
+      "street": "Rua Exemplo",
+      "number": "123",
+      "zipCode": "01000-000",
+      "city": "São Paulo",
+      "state": "SP"
+    }
+  },
+  "items": [
+    {
+      "title": "Produto Teste",
+      "quantity": 1,
+      "unitPrice": 10000
+    }
+  ]
+}
+```
 
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+A resposta retornará um código QR e uma chave `emv` do Pix Copia e Cola para você exibir para seu cliente.
+Você deverá ouvir as alterações de status através de nossos [Webhooks](/webhooks)!

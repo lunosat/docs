@@ -1,76 +1,52 @@
 ---
-title: Começando
-description: 'Guia rápido para integrar nossa API de Pagamentos em menos de 5 minutos.'
+title: Bem-vindo(a) à Legacy
+description: 'A documentação completa para integrar a API de pagamentos e saques da Legacy no seu produto.'
 ---
 
 <img
-  className="block w-full rounded-xl aspect-video object-cover"
-  src="/images/api-hero.png"
-  alt="PagueOne API Flow"
+  className="block dark:hidden"
+  src="/images/hero-light.svg"
+  alt="Hero Light"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/hero-dark.svg"
+  alt="Hero Dark"
 />
 
-## Bem-vindo à PagueOne
+## Começando
 
-Nossa API foi desenhada para desenvolvedores que valorizam simplicidade e performance. Com ela, você pode aceitar **Pix**, **Cartão de Crédito** e **Boleto** com uma única integração unificada.
+A API da Legacy permite que sua aplicação crie **Cobranças (Payins)** e faça **Saques (Payouts)** de maneira automatizada e segura, integrada ao nosso Dashboard.
+
+Para começar, explore nossos guias fundamentais e nossa especificação técnica:
 
 <CardGroup cols={2}>
   <Card
-    title="Criar Cobrança"
-    icon="bolt"
-    href="/api-reference/payins/create"
+    title="Autenticação"
+    icon="key"
+    href="/authentication"
   >
-    Aprenda a gerar QR Codes Pix e processar cartões instantaneamente.
+    Entenda como gerar suas chaves de API e se autenticar em nossas rotas.
   </Card>
   <Card
     title="Webhooks"
     icon="webhook"
     href="/webhooks"
   >
-    Configure notificações em tempo real para mudanças de status.
+    Aprenda a ouvir eventos em tempo real sobre o status das suas transações.
   </Card>
   <Card
-    title="Solicitar Saque"
+    title="Rotas de Payin"
     icon="money-bill-transfer"
+    href="/api-reference/payins/create"
+  >
+    Gere Pix, Boleto ou processe Cartões de Crédito.
+  </Card>
+  <Card
+    title="Rotas de Payout"
+    icon="money-check-dollar"
     href="/api-reference/payouts/create"
   >
-    Automatize o pagamento de comissões e transferências via Pix.
-  </Card>
-  <Card
-    title="Status e Erros"
-    icon="circle-exclamation"
-    href="/status"
-  >
-    Entenda o ciclo de vida das transações e como tratar falhas.
+    Liquide seus saldos através de transferências automatizadas.
   </Card>
 </CardGroup>
-
-## Quickstart
-
-Siga estes passos para realizar sua primeira transação de teste.
-
-<Steps>
-  <Step title="Obtenha suas Chaves de API">
-    Acesse o [Dashboard](https://app.pagueoneip.com.br/integrations/api) e gere suas credenciais.
-    
-    Você precisará da **Public Key** (`x-api-key`) e da **Secret Key** (`x-api-secret`).
-  </Step>
-  <Step title="Autentique sua Requisição">
-    Adicione as chaves no header de todas as suas chamadas.
-    
-    ```bash
-    x-api-key: pk_live_...
-    x-api-secret: sk_live_...
-    ```
-  </Step>
-  <Step title="Crie uma Cobrança Pix">
-    Envie um POST para `/payin` com os dados mínimos.
-    
-    ```bash
-    curl --request POST \
-      --url https://api.pagueoneip.com.br/payin \
-      --header 'x-api-key: SUA_CHAVE' \
-      --header 'x-api-secret: SEU_SEGREDO' \
-      --data '{"amount": 1000, "paymentMethod": "PIX", ...}'
-    ```
-  </Step>
-</Steps>

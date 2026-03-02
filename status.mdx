@@ -1,44 +1,61 @@
 ---
-title: 'Status e Ciclo de Vida'
-description: 'Entenda os estados das transações e como gerenciá-los.'
+title: 'Dicionário de Erros'
+description: 'Entenda os principais códigos de erro padronizados retornados pela API e como lidar com eles.'
+icon: 'bug'
 ---
 
-Para garantir a consistência financeira, utilizamos uma máquina de estados rigorosa. Uma transação só pode mover-se em uma direção (ex: de Pendente para Aprovado), nunca retroceder.
+Para garantir a estabilidade mútua e clareza, a Legacy oculta e padroniza os possíveis erros catastróficos vindos de adquirentes e parceiros bancários antes de enviá-los de volta à sua aplicação. Toda vez que uma requisição POST de Payin ou Payout não for finalizada como `201 Created`, e sofrer rejeição, você receberá um **Bad Request (400)** ou **Bad Gateway (502)** com propriedades contendo `error` como código fixo e `message` detalhando o ocorrido.
 
-## Ciclo de Vida Visual
-
-<div className="flex justify-center my-8">
-```mermaid
-graph LR
-    P[PENDING] -->|Pagamento Confirmado| A[APPROVED]
-    P -->|Tempo Expirou / Recusado| F[FAILED]
-    P -->|Cancelamento Manual| C[CANCELED]
-    
-    style P fill:#fbbf24,stroke:#d97706,color:#fff
-    style A fill:#22c55e,stroke:#166534,color:#fff
-    style F fill:#ef4444,stroke:#991b1b,color:#fff
-    style C fill:#64748b,stroke:#334155,color:#fff
+## Formato Padrão de Rejeição
+```json
+{
+  "error": "NOME_DO_ERRO_CONSTANTE",
+  "message": "Tradução amigável e explicativa do erro",
+  "statusCode": 400
+}
 ```
-</div>
-
-## Glossário de Status
-
-| Status | Ícone | Significado para Payin (Entrada) | Significado para Payout (Saída) |
-| :--- | :---: | :--- | :--- |
-| `PENDING` | <Icon icon="clock" color="#fbbf24" /> | Aguardando pagamento do cliente. O saldo **não** está disponível. | Solicitação criada, aguardando processamento bancário. Valor bloqueado. |
-| `APPROVED` | <Icon icon="check-circle" color="#22c55e" /> | Pagamento recebido e confirmado. O valor foi creditado no seu saldo. | Transferência realizada com sucesso para a conta de destino. |
-| `FAILED` | <Icon icon="circle-xmark" color="#ef4444" /> | Erro no pagamento (cartão recusado) ou boleto/pix expirado. | Falha no envio (chave inválida ou erro bancário). Saldo estornado. |
-| `CANCELED` | <Icon icon="ban" color="#64748b" /> | Cobrança cancelada antes do pagamento. | N/A (Saques não costumam ser cancelados manualmente após envio). |
 
 ---
 
-## Tratamento de Erros Comuns
+## 🛑 Família: Insucessos em Payins (Cobranças / Recebimentos)
+
+Erros comumente retornados quando o seu cliente tenta realizar um pagamento na sua loja.
 
 <CardGroup cols={2}>
-  <Card title="Timeout de Pix" icon="hourglass-end">
-    QRCodes Pix expiram em **24 horas** por padrão. Se não pago, o status muda automaticamente para `FAILED`.
+  <Card title="INVALID_DATA">
+    **Os dados enviados estão incorretos.** Ocorre quando a API rejeita algum campo base como telefone ou CEP.
   </Card>
-  <Card title="Cartão Recusado" icon="credit-card">
-    Se o status for para `FAILED` em cartão de crédito, geralmente é falta de saldo ou bloqueio do banco emissor.
+  <Card title="PAYER_LIMIT_REJECTED">
+    **Transação recusada por falta de limite.** O cliente não possui saldo o suficiente no Cartão de Crédito ou a administradora do banco dele impôs um bloqueio momentâneo.
+  </Card>
+  <Card title="REJECTED_BY_RISK">
+    **Negada pelo sistema de antifraude.** Rejeitado devido às pontuações baixas do *payerIp*, documentação sem lastro, ou indícios massivos de possível *Chargeback*.
+  </Card>
+  <Card title="INVALID_CVV">
+    **Código de segurança inválido.** O cliente enviou os dígitos errados na propriedade *card*.
+  </Card>
+  <Card title="PROVIDER_ERROR">
+    **Falha no processamento com o parceiro bancário.** Genérico. Significa que a bandeira (Visa, Mastercard) recusou e não expôs o motivo para nós.
+  </Card>
+</CardGroup>
+
+---
+
+## 🛑 Família: Insucessos em Payouts (Saques / Liquidações)
+
+Erros mapeados para as tentativas de transferência do seu saldo via PIX.
+
+<CardGroup cols={2}>
+  <Card title="INVALID_PIX_KEY">
+    **Chave PIX inválida ou não encontrada no DICT.** O recebedor enviou um CPF/CNPJ ou Email que não existe registrado no Banco Central sob aquele banco.
+  </Card>
+  <Card title="TEMPORARY_UNAVAILABLE">
+    **Saldo indisponível na adquirente temporariamente.** Um erro de balanceamento pontual na rede da Legacy (*tentar refazer a chamada em 5 a 10 minutos*).
+  </Card>
+  <Card title="BEYOND_LIMITS">
+    **O valor excede o limite permitido neste horário.** Geralmente acontece pelo Sistema Financeiro Brasileiro bloquear PIX altos (mais de R$1.000) nos horários noturnos (19:00h até 06:00h).
+  </Card>
+  <Card title="PROVIDER_REJECTED">
+    **A instituição bancária rejeitou a transferência.** Genérico. Uma anomalia não documentada no SPB impediu a transferência.
   </Card>
 </CardGroup>

@@ -1,106 +1,77 @@
 ---
-title: 'Solicitar Saque'
+title: 'Criar Payout'
 api: 'POST /payout'
-description: 'Realize transferências Pix instantâneas.'
+description: 'Inicia uma transferência financeira (Saque) via PIX da sua conta corporativa para terceiros (contas, fornecedores).'
 ---
 
-Permite enviar valores da sua conta para qualquer chave Pix de terceiros ou conta bancária.
+Crie e acompanhe transferências de saídas seguras do seu saldo disponível utilizando as chaves PIX de destino cadastradas em território brasileiro.
 
-## Validadores e Saldo
-
-<Warning>
-  Se o saldo disponível for menor que o valor solicitado, a API retornará o erro `Insufficient balance` (400).
-</Warning>
+## Autorização
+<ParamField header="Authorization" type="string" required>
+  Use o Basic Auth codificado em 64 das suas chaves de produção.
+</ParamField>
 
 ## Body
 
 <ParamField body="amount" type="integer" required>
-  Valor do saque em **centavos** (inteiro).
-  Exemplo: R$ 50,00 deve ser enviado como `5000`.
+  Somas totais a retirar em **centavos** sem pontuação (Min: R$1,00 - `100`).
 </ParamField>
 
 <ParamField body="pixKey" type="string" required>
-  A chave Pix de destino para onde o dinheiro será enviado.
+  Documentação/chave da conta recebedora do Bacen. Pode ser Email, CPF/CNPJ ou UUID.
 </ParamField>
 
 <ParamField body="pixKeyType" type="string" required>
-  O tipo da chave Pix informada.
-  Valores aceitos: `CPF`, `CNPJ`, `EMAIL`, `PHONE`, `EVP` (chave aleatória).
+  Determina de que formato é a *pixKey*. Valores suportados:
+  - `CPF`
+  - `CNPJ`
+  - `EMAIL`
+  - `PHONE`
+  - `EVP` (Chave Aleatória)
 </ParamField>
 
 <ParamField body="referenceId" type="string" required>
-  Seu ID interno único para controle dessa transação.
-</ParamField>
-
-<ParamField body="beneficiaryName" type="string">
-  Nome completo do beneficiário.
-  *Recomendado enviar para validação de segurança.*
-</ParamField>
-
-<ParamField body="beneficiaryDocument" type="string">
-  CPF ou CNPJ do beneficiário (somente números).
-  *Recomendado enviar para validação de segurança.*
+  Identificador unívoco do seu lado para alinhar recibos. Recomendação: GUIDV4.
 </ParamField>
 
 <ParamField body="webhookUrl" type="string">
-  URL para receber notificações de status da transferência (Webhooks).
+  Um end-point configurado do seu lado para ouvir mudanças até que o saco atinja `COMPLETED` ou `FAILED`.
 </ParamField>
 
-## Exemplos
+<ParamField body="beneficiaryName" type="string">
+  O nome da pessoa que receberá na conta bancária (Aprovado durante o KYC do DICT - Diretório de contatos PIX). Opcional.
+</ParamField>
 
-<CodeGroup>
-```bash cURL
-curl --request POST \
-  --url https://api.pagueoneip.com.br/payout \
-  --header 'Content-Type: application/json' \
-  --header 'x-api-key: SUA_CHAVE_PUBLICA' \
-  --header 'x-api-secret: SUA_CHAVE_SECRETA' \
-  --data '{
-  "amount": 5000,
-  "pixKey": "user@email.com",
-  "pixKeyType": "EMAIL",
-  "beneficiaryName": "João da Silva",
-  "beneficiaryDocument": "12345678900",
-  "referenceId": "saque_001",
-  "webhookUrl": "https://seu-site.com/webhook/payout"
-}'
-```
+<ParamField body="beneficiaryDocument" type="string">
+  Opcional. Caso o recebedor possua empresa associada ao destino do saque.
+</ParamField>
 
-```json JSON (Body)
+---
+
+## Response
+
+A rota retornará o estado inicial da transferência. Como o saque bancário depende da grade horária do SPB, geralmente a resposta nasce como `PENDING` ou `PROCESSING`.
+
+```json
 {
-  "amount": 5000,
-  "pixKey": "user@email.com",
-  "pixKeyType": "EMAIL",
-  "beneficiaryName": "João da Silva",
-  "beneficiaryDocument": "12345678900",
-  "referenceId": "saque_001",
-  "webhookUrl": "https://seu-site.com/webhook/payout"
-}
-```
-</CodeGroup>
-
-## Respostas
-
-<CodeGroup>
-```json 201 Created
-{
-  "id": "a1b2c3d4-...",
+  "id": "payout_1001A",
+  "externalId": null,
   "status": "PENDING",
-  "amount": 5000,
-  "currency": "BRL",
-  "pixKey": "user@email.com",
+  "amount": 250000,
+  "pixKey": "maria@email.com",
   "pixKeyType": "EMAIL",
-  "referenceId": "saque_001",
-  "externalId": "tx_98765...",
-  "createdAt": "2025-12-16T20:00:00.000Z"
+  "referenceId": "comissionado_001",
+  "beneficiaryName": null,
+  "createdAt": "2026-03-02T16:25:00.000Z"
 }
 ```
 
-```json 400 Bad Request
-{
-  "statusCode": 400,
-  "message": "Insufficient balance",
-  "error": "Bad Request"
-}
-```
-</CodeGroup>
+---
+
+### Erros de Validação Comuns (4xx):
+- **Insufficient Funds (400)**: A sua conta, descontando os bloqueios ou saques previstos, não possui o `amount` para a transferência se concretizar.
+- **Invalid Key (422)**: A formatação da chave falhou antes de ser encaminhada ao DICT para varredura.
+
+<Tip>
+Lembre-se de verificar sempre em nossos [Webhooks](/webhooks) para automatizar o reflexo do saque retornado de falha na carteira do seu painel e devolver o saldo virtual de volta.
+</Tip>

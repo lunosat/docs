@@ -1,50 +1,34 @@
 ---
-title: 'Consultar Cobrança'
+title: 'Obter Payin'
 api: 'GET /payin/{id}'
-description: 'Busque os detalhes de uma transação específica.'
+description: 'O endpoint GET resgata detalhes totais estruturais de um único pagamento originário gerado pelo sua conta.'
 ---
 
-Recupere todas as informações de uma cobrança, incluindo status atualizado, taxas e valores líquidos.
+Geralmente, você buscará os detalhes para consultar as contabilidades de taxa deduzida do Payin, ou verificar se o status foi atualizado caso você não possua/tenha perdido um evento de **Webhook**.
 
-## Parâmetros
-
+## Path Parameters
 <ParamField path="id" type="string" required>
-  Identificador da cobrança.
-  
-  Pode ser:
-  - Nosso ID interno (`uuid`)
-  - O ID externo do adquirente (`externalId`)
-  - Seu ID de referência (`referenceId`)
+  O código alfanumérico devolvido em um Webhook ou criado na sua base como `id` da plataforma (Ex: `payin_1234`).
 </ParamField>
 
-## Resposta
+## Response
+A resposta retornará propriedades minuciosas, os itens e o cliente que executou o pagamento.
 
-<CodeGroup>
-```json 200 OK
+```json
 {
-  "id": "fc1a3b2c-...",
-  "status": "APPROVED",
-  "amount": 10000,
-  "netAmount": 9750,
-  "fees": 250,
-  "paymentMethod": "PIX",
-  "referenceId": "pedido_123",
-  "externalId": "tx_987654321",
-  "companyId": "comp_123",
-  "createdAt": "2024-01-01T10:00:00Z",
-  "updatedAt": "2024-01-01T10:00:05Z",
+  "id": "payin_1234",
+  "status": "PENDING",
+  "paymentMethod": "BOLETO",
+  "amount": 54000,
+  "referenceId": "meu-pedido-29",
   "customer": {
-    "name": "Cliente Exemplo",
-    "document": "***.123.456-**"
-  }
+     "name": "João Oliveira",
+     "document": "12345678900"
+  },
+  "items": [],
+  "createdAt": "2026-03-02T13:00:00.000Z",
+  "pixQrCode": null,
+  "pixEmv": null,
+  "boletoUrl": "https://adquirente.legacy/boleto/435.pdf"
 }
 ```
-
-```json 404 Not Found
-{
-  "statusCode": 404,
-  "message": "Payin not found",
-  "error": "Not Found"
-}
-```
-</CodeGroup>

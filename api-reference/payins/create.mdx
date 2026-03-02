@@ -1,198 +1,142 @@
 ---
-title: 'Criar Cobrança'
+title: 'Criar Payin'
 api: 'POST /payin'
-description: 'Crie cobranças via Pix, Boleto ou Cartão de Crédito.'
+description: 'Cria uma nova requisição de pagamento (Payin) usando Cartão de Crédito, Boleto ou PIX.'
 ---
 
-Este é o endpoint principal da nossa API. Aqui você pode gerar cobranças instantâneas para seus clientes.
+## Autorização
+Você deve obrigatoriamente fornecer sua credencial no cabeçalho.
+<ParamField header="Authorization" type="string" required>
+  Use o Basic Auth base64 de suas chaves de produção. Ex: `Basic cGtf...`
+</ParamField>
 
 ## Body
-
 <ParamField body="paymentMethod" type="string" required>
-  Método de pagamento.
-  Valores aceitos: `PIX`, `CREDIT_CARD`, `BOLETO`.
+  Os valores aceitos são: `"CREDIT_CARD"`, `"PIX"` ou `"BOLETO"`
 </ParamField>
 
 <ParamField body="amount" type="integer" required>
-  Valor da transação em **centavos**.
-  Exemplo: R$ 10,00 deve ser enviado como `1000`.
+  Valor total da transação em **centavos**. Exemplo: para R$100,00 envie `10000`
 </ParamField>
 
 <ParamField body="referenceId" type="string" required>
-  O ID do pedido no **seu** sistema (ex: "pedido_123").
-  Usaremos esse ID para comunicar atualizações via webhook.
-</ParamField>
-
-<ParamField body="payerIp" type="string" required>
-  Endereço IP do cliente pagador (IPv4 ou IPv6).
-</ParamField>
-
-<ParamField body="isPhysicalProduct" type="boolean" required>
-  `true` se houver entrega física, `false` para produtos digitais.
+  ID único ou número do pedido dentro do banco de dados da sua aplicação associada à cobrança.
 </ParamField>
 
 <ParamField body="webhookUrl" type="string">
-  URL onde você deseja receber as notificações de status (Webhooks).
+  Opcional. Uma URL do seu backend (`https://...`) que deverá ser notificada quando o status deste pagamento mudar (Ex: o Pix for pago).
 </ParamField>
 
-<Note>
-  O objeto `card` abaixo só é obrigatório se o `paymentMethod` for `CREDIT_CARD`.
-</Note>
-
-<ParamField body="card" type="object">
-  <Expandable title="Propriedades do Cartão">
-    <ParamField body="holderName" type="string" required>Nome como impresso no cartão.</ParamField>
-    <ParamField body="number" type="string" required>Número do cartão (somente dígitos).</ParamField>
-    <ParamField body="expirationMonth" type="string" required>Mês de expiração (2 dígitos, ex: "12").</ParamField>
-    <ParamField body="expirationYear" type="string" required>Ano de expiração (4 dígitos, ex: "2030").</ParamField>
-    <ParamField body="cvv" type="string" required>Código de segurança (CVV).</ParamField>
-    <ParamField body="installments" type="integer" required>Número de parcelas (1 a 12).</ParamField>
-    <ParamField body="token" type="string">Token do cartão para compras futuras (one-click).</ParamField>
-  </Expandable>
+<ParamField body="isPhysicalProduct" type="boolean" required>
+  Indica se o item cobrado exige entrega física (`true`) ou se é digital ou serviço (`false`).
 </ParamField>
 
-### Objeto Customer
+<ParamField body="payerIp" type="string" required>
+  Endereço de IPv4 de quem está efetuando o pagamento originário (Necessário para a prevenção de Fraudes e Anti-Chargeback).
+</ParamField>
 
-Dados do cliente são obrigatórios para emissão de notas e análise de fraude.
+---
 
+### Customer (Cliente)
+Objeto encapsulando quem está comprando de você.
 <ParamField body="customer" type="object" required>
-  <Expandable title="Propriedades do Cliente">
+  <Expandable title="propriedades" defaultOpen={true}>
     <ParamField body="name" type="string" required>Nome completo.</ParamField>
-    <ParamField body="document" type="string" required>CPF ou CNPJ (somente números).</ParamField>
-    <ParamField body="email" type="string" required>E-mail válido.</ParamField>
-    <ParamField body="phone" type="string" required>Telefone com DDD (somente números).</ParamField>
+    <ParamField body="document" type="string" required>CPF ou CNPJ válido apenas em números.</ParamField>
+    <ParamField body="email" type="string" required>E-mail autêntico do pagador.</ParamField>
+    <ParamField body="phone" type="string" required>DDD + Número (Ex: 11999999999).</ParamField>
     <ParamField body="address" type="object" required>
-        <Expandable title="Endereço">
-            <ParamField body="street" type="string" required>Rua / Logradouro.</ParamField>
-            <ParamField body="number" type="string" required>Número.</ParamField>
-            <ParamField body="complement" type="string">Complemento (Apto, Bloco).</ParamField>
-            <ParamField body="zipCode" type="string" required>CEP (somente números).</ParamField>
-            <ParamField body="city" type="string" required>Cidade.</ParamField>
-            <ParamField body="state" type="string" required>Estado (Sigla, ex: SP).</ParamField>
-        </Expandable>
+      <Expandable title="propriedades do endereço">
+        <ParamField body="street" type="string" required>Logradouro/Rua</ParamField>
+        <ParamField body="number" type="string" required>Número residencial</ParamField>
+        <ParamField body="complement" type="string">Opcional. Complemento como Bloco B.</ParamField>
+        <ParamField body="zipCode" type="string" required>CEP</ParamField>
+        <ParamField body="city" type="string" required>Cidade (Ex: São Paulo)</ParamField>
+        <ParamField body="state" type="string" required>Sigla do Estado (Ex: SP)</ParamField>
+      </Expandable>
     </ParamField>
   </Expandable>
 </ParamField>
 
-### Objeto Items
+---
 
-Lista de itens que compõem o pedido.
-
+### Items (Carrinho)
+Array de objetos especificando o que está sendo comprado e taxado.
 <ParamField body="items" type="array" required>
-  <Expandable title="Item do Pedido">
-    <ParamField body="title" type="string" required>Nome do produto/serviço.</ParamField>
-    <ParamField body="quantity" type="integer" required>Quantidade (mínimo 1).</ParamField>
-    <ParamField body="unitPrice" type="integer" required>Preço unitário em centavos.</ParamField>
-    <ParamField body="description" type="string">Descrição detalhada (opcional).</ParamField>
+  <Expandable title="item propriedades">
+    <ParamField body="title" type="string" required>Nome ou Título legível do produto.</ParamField>
+    <ParamField body="quantity" type="integer" required>Mínimo de 1.</ParamField>
+    <ParamField body="unitPrice" type="integer" required>Preço de 1 único item da lista (em centavos).</ParamField>
+    <ParamField body="description" type="string">Descrição opcional.</ParamField>
   </Expandable>
 </ParamField>
 
 ---
 
-## Exemplos
+### Card (Cartão de Crédito)
+Se o `paymentMethod` escolhido foi `"CREDIT_CARD"`, as propriedades do cartão são **obrigatórias**. Para as formas PIX e Boleto, omitir este objeto por inteiro.
+<ParamField body="card" type="object">
+  <Expandable title="propriedades de criptografia">
+     <ParamField body="holderName" type="string" required>Nome impresso no plástico do cartão.</ParamField>
+     <ParamField body="number" type="string" required>Os dezesseis dígitos ou Token Sensível.</ParamField>
+     <ParamField body="expirationMonth" type="string" required>Exemplo: `08`</ParamField>
+     <ParamField body="expirationYear" type="string" required>Exemplo: `2027` ou `27`</ParamField>
+     <ParamField body="cvv" type="string" required>Três ou quatro dígitos de trás.</ParamField>
+     <ParamField body="installments" type="integer" required>Quantidade de parcelas solicitadas na maquininha sem juros (Ex: 1 a 12).</ParamField>
+     <ParamField body="threeDSecure" type="object">
+       Opcional. Contêm métricas de validação 3DS caso você tenha injetado tokens VBV (Verified by Visa/Mastercard).
+     </ParamField>
+  </Expandable>
+</ParamField>
 
-<CodeGroup>
-```bash cURL (Pix)
-curl --request POST \
-  --url https://api.pagueoneip.com.br/payin \
-  --header 'Content-Type: application/json' \
-  --header 'x-api-key: SUA_CHAVE_PUBLICA' \
-  --header 'x-api-secret: SUA_CHAVE_SECRETA' \
-  --data '{
-  "paymentMethod": "PIX",
-  "amount": 15000,
-  "referenceId": "pedido_9988",
-  "payerIp": "192.168.1.1",
-  "isPhysicalProduct": false,
-  "customer": {
-    "name": "João da Silva",
-    "document": "12345678909",
-    "email": "joao@email.com",
-    "phone": "11999998888",
-    "address": {
-      "street": "Rua das Flores",
-      "number": "123",
-      "zipCode": "01001000",
-      "city": "São Paulo",
-      "state": "SP"
-    }
-  },
-  "items": [
-    {
-      "title": "Assinatura Premium",
-      "quantity": 1,
-      "unitPrice": 15000
-    }
-  ]
-}'
-```
+---
 
-```json JSON (Body)
+## Response
+
+A resposta varia ligeiramente dependendo do método de pagamento escolhido. A API sempre tentará devolver um `201 Created`.
+
+### Sucesso: Criação de PIX
+```json
 {
-  "paymentMethod": "CREDIT_CARD",
-  "amount": 5000,
-  "referenceId": "pedido_9989",
-  "payerIp": "192.168.1.1",
-  "isPhysicalProduct": true,
-  "webhookUrl": "https://meusite.com/webhook",
-  "customer": {
-    "name": "Maria Oliveira",
-    "document": "12345678909",
-    "email": "maria@email.com",
-    "phone": "11988887777",
-    "address": {
-      "street": "Av Paulista",
-      "number": "1000",
-      "complement": "Apto 10",
-      "zipCode": "01310100",
-      "city": "São Paulo",
-      "state": "SP"
-    }
-  },
-  "card": {
-    "holderName": "MARIA OLIVEIRA",
-    "number": "4111111111111111",
-    "expirationMonth": "12",
-    "expirationYear": "2028",
-    "cvv": "123",
-    "installments": 1
-  },
-  "items": [
-    {
-      "title": "Camiseta",
-      "quantity": 1,
-      "unitPrice": 5000
-    }
-  ]
-}
-```
-</CodeGroup>
-
-## Respostas
-
-<CodeGroup>
-```json 201 Created
-{
-  "id": "fc1a3b2c-...",
+  "id": "payin_12345",
+  "externalId": "tx_998877",
+  "referenceId": "meu-pedido-1234",
   "status": "PENDING",
-  "amount": 15000,
+  "amount": 10000,
   "paymentMethod": "PIX",
-  "referenceId": "pedido_9988",
+  "createdAt": "2026-03-02T12:00:00.000Z",
   "pix": {
-    "qrcode": "00020126580014BR.GOV.BCB.PIX...",
-    "expiration": "2024-01-01T12:30:00Z"
+    "qrcode": "00020101021126360014br.gov.bcb.pix0114+5511999999999520400005303986540510.0058..."
   }
 }
 ```
 
-```json 400 Bad Request
+### Sucesso: Criação de Boleto
+```json
 {
-  "statusCode": 400,
-  "message": [
-    "amount must be an integer number",
-    "customer.document must be a valid CPF or CNPJ"
-  ],
-  "error": "Bad Request"
+  "id": "payin_12346",
+  "externalId": "tx_998878",
+  "referenceId": "meu-pedido-1235",
+  "status": "PENDING",
+  "amount": 10000,
+  "paymentMethod": "BOLETO",
+  "createdAt": "2026-03-02T12:05:00.000Z",
+  "boleto": {
+    "barcode": "34191.09008 00000.000004 00000.000006 1 800000000010000",
+    "url": "https://adquirente.legacy.com.br/boleto/12346"
+  }
 }
 ```
-</CodeGroup>
+
+### Sucesso: Cartão de Crédito
+```json
+{
+  "id": "payin_12347",
+  "externalId": "tx_998879",
+  "referenceId": "meu-pedido-1236",
+  "status": "APPROVED",
+  "amount": 10000,
+  "paymentMethod": "CREDIT_CARD",
+  "createdAt": "2026-03-02T12:10:00.000Z"
+}
+```

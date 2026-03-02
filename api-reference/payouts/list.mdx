@@ -1,0 +1,49 @@
+---
+title: 'Listar Payouts'
+api: 'GET /payout'
+description: 'Retorna múltiplos registros passados de Saque originários da conta.'
+---
+
+Este endpoint é usado como livro-razão local; Você poderá renderizar e prever o status da saída caso o Webhook sofra quedas momentâneas.
+
+## Query Parameters Suportados
+
+<ParamField query="status" type="string">
+  - `PENDING`
+  - `PROCESSING`
+  - `COMPLETED`
+  - `FAILED`
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  Página para carregamento (1 à frente).
+</ParamField>
+
+<ParamField query="limit" type="integer" default="20">
+  Quantidade de itens encapsulados (Max: 100).
+</ParamField>
+
+---
+
+## Retorno
+
+A página apresentará saques no padrão do `schema`:
+
+```json
+{
+  "total": 52,
+  "currentPage": 1,
+  "totalPages": 3,
+  "items": [
+    {
+       "id": "payout_XXX299",
+       "status": "COMPLETED",
+       "amount": 250000,
+       "pixKey": "test@ legacy.com.br",
+       "pixKeyType": "EMAIL",
+       "referenceId": "comissionado_002",
+       "createdAt": "2026-03-02T16:00:20.000Z"
+    }
+  ]
+}
+```

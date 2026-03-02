@@ -1,113 +1,69 @@
 ---
 title: 'Webhooks'
-description: 'Receba notificações em tempo real e automatize seu negócio.'
+description: 'Como receber e tratar notificações em tempo real sobre transações da Legacy.'
+icon: 'webhook'
 ---
 
-Webhooks são gatilhos HTTP automáticos que enviamos para o seu servidor sempre que algo importante acontece, como quando um Pix é pago ou um saque é processado.
+A Legacy oferece suporte a Webhooks, mecanismo que envia requisições `HTTP POST` diretamente para a sua aplicação toda vez que ocorre uma mudança de evento importante em nossa infraestrutura.
 
-## Como Funciona
+Por exemplo, você pode receber um alerta sempre que:
+- O pagamento de um `PIX` for aprovado pelo banco.
+- Um saque (`Payout`) finalizar com sucesso.
+- Um pagamento por Cartão de Crédito virar Chargeback.
 
-<div className="flex justify-center my-8">
-```mermaid
-sequenceDiagram
-    participant Cliente
-    participant PagueOne
-    participant SeuServidor
+## Onde configurar
 
-    Cliente->>PagueOne: Realiza Pagamento (Pix/Cartão)
-    PagueOne-->>Cliente: Confirmação Visual
-    PagueOne->>PagueOne: Processa Transação
-    PagueOne->>SeuServidor: POST /webhook (Payload JSON)
-    SeuServidor-->>PagueOne: 200 OK
-    Note right of SeuServidor: Seu sistema libera o pedido<br/>para o cliente.
-```
-</div>
+Durante as requisições, por exemplo na criação de um Payback `POST /payin`, você envidará nativamente a propriedade `webhookUrl`. A Legacy enviará todas as atualizações pertencentes àquele pagamento para a URL informada dinamicamente.
 
-## Configuração
+## Validação e Eventos (Payins)
 
-Você deve configurar sua **Webhook URL** no momento de criar a transação (`payin` ou `payout`).
-
-<Warning>
-  **Requisito de Confiabilidade:**
-  Seu endpoint DEVE responder com **HTTP 200 OK** em menos de 5 segundos. Caso contrário, consideraremos falha e tentaremos reenviar a notificação (retry) exponencialmente.
-</Warning>
-
-## Payload de Eventos
-
-### Payin (Pagamento Recebido)
-
-Quando um cliente paga, você recebe este payload:
+Quando a Legacy enviar um webhook do Payin, nós usaremos o seguinte **Payload**:
 
 ```json
 {
-  "event": "PAYMENT_STATUS_CHANGED",
-  "data": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "referenceId": "pedido_12345",
-    "status": "APPROVED",
-    "amount": 10050,
-    "paymentMethod": "PIX",
-    "createdAt": "2023-10-27T10:00:00Z",
-    "processedAt": "2023-10-27T10:05:00Z"
-  }
+  "id": "payin_12345",
+  "status": "APPROVED",
+  "paymentMethod": "PIX",
+  "amount": 10000,
+  "referenceId": "meu-pedido-1234",
+  "customer": {
+    "name": "Maria Silva",
+    "email": "maria@email.com"
+  },
+  "updatedAt": "2026-03-02T12:00:00.000Z"
 }
 ```
 
-### Payout (Saque Processado)
+### Possíveis Status do Payin
+É aconselhável que o seu sistema saiba lidar de forma fluida com estes retornos:
 
-Quando uma transferência solicitada por você é finalizada:
+- `PENDING` - Gerado, aguardando liquidação.
+- `APPROVED` - O saldo está disponível para a loja.
+- `FAILED` - Falha catastrófica (Ex: Adquirente fora do ar).
+- `CANCELED` - A transação foi cancelada antes de ocorrer.
+- `REFUSED` - Saldo negado pelo emissor do Cartão ou sistema Anti-Fraudes.
+- `REFUNDED` - Você aplicou um estorno parcial/total na mesma.
+- `CHARGEBACK` - Seu cliente contestou com o banco emissor o uso indevido da compra.
+- `EXPIRED` - Janela de PIX ou Boleto vencidas.
+
+## Validação e Eventos (Payouts)
+
+Para o saque manual efetuado via API, `POST /payout`, a estrutura possui o seguinte comportamento de disparos no Webhook:
 
 ```json
 {
-  "event": "PAYOUT_STATUS_CHANGED",
-  "data": {
-    "id": "a1b2c3d4-...",
-    "referenceId": "saque_001",
-    "status": "APPROVED",
-    "amount": 5000,
-    "pixKey": "user@email.com",
-    "processedAt": "2023-10-27T14:30:00Z"
-  }
+  "id": "payout_98765",
+  "status": "COMPLETED",
+  "amount": 50000,
+  "pixKey": "maria@email.com",
+  "pixKeyType": "EMAIL",
+  "referenceId": "saque-afiliado-01",
+  "updatedAt": "2026-03-02T12:30:00.000Z"
 }
 ```
+*Geralmente, um Payout trafegará pelo status `PROCESSING` até consolidar-se em `COMPLETED` ou `FAILED`.*
 
-## Exemplo de Implementação
-
-Recebendo o webhook com segurança em Node.js (Express).
-
-```javascript
-const express = require('express');
-const app = express();
-
-app.use(express.json());
-
-app.post('/webhook', (req, res) => {
-  const { event, data } = req.body;
-
-  console.log(`Recebido evento: ${event} para ID: ${data.referenceId}`);
-
-  if (event === 'PAYMENT_STATUS_CHANGED') {
-    if (data.status === 'APPROVED') {
-      // TODO: Liberar acesso do usuário / Enviar produto
-      console.log(`Pagamento ${data.amount} aprovado!`);
-    }
-  }
-
-  // Importante: Responder 200 OK rapidamente
-  res.status(200).send('OK');
-});
-
-app.listen(3000, () => console.log('Webhook server running on port 3000'));
-```
-
-## Boas Práticas
-
-<AccordionGroup>
-  <Accordion title="Idempotência (Evite Duplicidade)">
-    Webhooks podem ser entregues mais de uma vez devido a retries de rede. 
-    **Sempre verifique se a transação já foi processada** no seu banco de dados antes de liberar créditos novamente. Utilize o `id` da transação como chave de idempotência.
-  </Accordion>
-  <Accordion title="Segurança">
-    Embora a URL seja pública, recomendamos que você valide se o evento realmente pertence a um pedido existente no seu sistema através do `referenceId` antes de tomar qualquer ação.
-  </Accordion>
-</AccordionGroup>
+***
+<Tip>
+Sempre retorne qualquer status HTTP no range `2xx` (Ex: `200 OK`) nos seus controladores de webhook. Se nosso endpoint falhar, tentaremos despachar novamente em janelas crescentes de repetição.
+</Tip>
