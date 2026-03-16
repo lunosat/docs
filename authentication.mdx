@@ -42,7 +42,7 @@ const publicKey = 'pk_live_xxxxxx';
 const secretKey = 'sk_live_yyyyyy';
 const encodedCredentials = Buffer.from(`${publicKey}:${secretKey}`).toString('base64');
 
-axios.post('https://api.legacyecom.com.br/payin', payload, {
+axios.post('https://api.holdinglegacy.io/payin', payload, {
   headers: {
     'Authorization': `Basic ${encodedCredentials}`
   }
