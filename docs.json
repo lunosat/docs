@@ -3,7 +3,7 @@
   "theme": "mint",
   "name": "Legacy API",
   "api": {
-    "baseUrl": "https://api.legacyecom.com.br"
+    "baseUrl": "https://api.holdinglegacy.io"
   },
   "modeToggle": {
     "default": "light",
