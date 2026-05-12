@@ -1,22 +1,25 @@
 ---
-title: 'Criar Payin'
-api: 'POST https://api.legacyecom.com.br/payin'
-description: 'Cria uma nova requisição de pagamento (Payin) usando Cartão de Crédito, Boleto ou PIX.'
+title: "Criar Payin"
+api: "POST https://api.legacyecom.com.br/payin"
+description: "Cria uma nova requisição de pagamento (Payin) usando Cartão de Crédito, Boleto ou PIX."
 ---
 
 ## Autorização
+
 Você deve obrigatoriamente fornecer sua credencial no cabeçalho.
+
 <ParamField header="Authorization" type="string" required>
   Use o Basic Auth base64 de suas chaves de produção. Ex: `Basic cGtf...`
 </ParamField>
 
 ## Body
+
 <ParamField body="paymentMethod" type="string" required>
   Os valores aceitos são: `"CREDIT_CARD"`, `"PIX"` ou `"BOLETO"`
 </ParamField>
 
 <ParamField body="amount" type="integer" required>
-  Valor total da transação em **centavos**. Exemplo: para R$100,00 envie `10000`
+  Valor total da transação em **centavos**. Exemplo: para R\$100,00 envie `10000`
 </ParamField>
 
 <ParamField body="referenceId" type="string" required>
@@ -38,21 +41,44 @@ Você deve obrigatoriamente fornecer sua credencial no cabeçalho.
 ---
 
 ### Customer (Cliente)
+
 Objeto encapsulando quem está comprando de você.
+
 <ParamField body="customer" type="object" required>
-  <Expandable title="propriedades" defaultOpen={true}>
-    <ParamField body="name" type="string" required>Nome completo.</ParamField>
-    <ParamField body="document" type="string" required>CPF ou CNPJ válido apenas em números.</ParamField>
-    <ParamField body="email" type="string" required>E-mail autêntico do pagador.</ParamField>
-    <ParamField body="phone" type="string" required>DDD + Número (Ex: 11999999999).</ParamField>
+  <Expandable title="propriedades" defaultOpen>
+    <ParamField body="name" type="string" required>
+      Nome completo.
+    </ParamField>
+     <ParamField body="document" type="string" required>
+      CPF ou CNPJ válido apenas em números.
+    </ParamField>
+     <ParamField body="email" type="string" required>
+      E-mail autêntico do pagador.
+    </ParamField>
+     <ParamField body="phone" type="string" required>
+      DDD \+ Número (Ex: 11999999999).
+    </ParamField>
+
     <ParamField body="address" type="object" required>
       <Expandable title="propriedades do endereço">
-        <ParamField body="street" type="string" required>Logradouro/Rua</ParamField>
-        <ParamField body="number" type="string" required>Número residencial</ParamField>
-        <ParamField body="complement" type="string">Opcional. Complemento como Bloco B.</ParamField>
-        <ParamField body="zipCode" type="string" required>CEP</ParamField>
-        <ParamField body="city" type="string" required>Cidade (Ex: São Paulo)</ParamField>
-        <ParamField body="state" type="string" required>Sigla do Estado (Ex: SP)</ParamField>
+        <ParamField body="street" type="string" required>
+          Logradouro/Rua
+        </ParamField>
+         <ParamField body="number" type="string" required>
+          Número residencial
+        </ParamField>
+         <ParamField body="complement" type="string">
+          Opcional. Complemento como Bloco B.
+        </ParamField>
+         <ParamField body="zipCode" type="string" required>
+          CEP
+        </ParamField>
+         <ParamField body="city" type="string" required>
+          Cidade (Ex: São Paulo)
+        </ParamField>
+         <ParamField body="state" type="string" required>
+          Sigla do Estado (Ex: SP)
+        </ParamField>
       </Expandable>
     </ParamField>
   </Expandable>
@@ -61,31 +87,60 @@ Objeto encapsulando quem está comprando de você.
 ---
 
 ### Items (Carrinho)
+
 Array de objetos especificando o que está sendo comprado e taxado.
+
 <ParamField body="items" type="array" required>
   <Expandable title="item propriedades">
-    <ParamField body="title" type="string" required>Nome ou Título legível do produto.</ParamField>
-    <ParamField body="quantity" type="integer" required>Mínimo de 1.</ParamField>
-    <ParamField body="unitPrice" type="integer" required>Preço de 1 único item da lista (em centavos).</ParamField>
-    <ParamField body="description" type="string">Descrição opcional.</ParamField>
+    <ParamField body="title" type="string" required>
+      Nome ou Título legível do produto.
+    </ParamField>
+     <ParamField body="quantity" type="integer" required>
+      Mínimo de 1.
+    </ParamField>
+     <ParamField body="unitPrice" type="integer" required>
+      Preço de 1 único item da lista (em centavos).
+    </ParamField>
+     <ParamField body="description" type="string">
+      Descrição opcional.
+    </ParamField>
   </Expandable>
 </ParamField>
 
 ---
 
 ### Card (Cartão de Crédito)
+
 Se o `paymentMethod` escolhido foi `"CREDIT_CARD"`, as propriedades do cartão são **obrigatórias**. Para as formas PIX e Boleto, omitir este objeto por inteiro.
+
 <ParamField body="card" type="object">
   <Expandable title="propriedades de criptografia">
-     <ParamField body="holderName" type="string" required>Nome impresso no plástico do cartão.</ParamField>
-     <ParamField body="number" type="string" required>Os dezesseis dígitos ou Token Sensível.</ParamField>
-     <ParamField body="expirationMonth" type="string" required>Exemplo: `08`</ParamField>
-     <ParamField body="expirationYear" type="string" required>Exemplo: `2027` ou `27`</ParamField>
-     <ParamField body="cvv" type="string" required>Três ou quatro dígitos de trás.</ParamField>
-     <ParamField body="installments" type="integer" required>Quantidade de parcelas solicitadas na maquininha sem juros (Ex: 1 a 12).</ParamField>
-     <ParamField body="threeDSecure" type="object">
-       Opcional. Contêm métricas de validação 3DS caso você tenha injetado tokens VBV (Verified by Visa/Mastercard).
-     </ParamField>
+    <ParamField body="holderName" type="string" required>
+      Nome impresso no plástico do cartão.
+    </ParamField>
+     <ParamField body="number" type="string" required>
+      Os dezesseis dígitos ou Token Sensível.
+    </ParamField>
+     <ParamField body="expirationMonth" type="string" required>
+      Exemplo: 
+      `08`
+    </ParamField>
+     <ParamField body="expirationYear" type="string" required>
+      Exemplo: 
+      `2027`
+       ou 
+      `27`
+    </ParamField>
+     <ParamField body="cvv" type="string" required>
+      Três ou quatro dígitos de trás.
+    </ParamField>
+     <ParamField body="installments" type="integer" required>
+      Quantidade de parcelas solicitadas na maquininha sem juros (Ex: 1 a 12).
+    </ParamField>
+
+    <ParamField body="threeDSecure" type="object">
+      Opcional. Contêm métricas de validação 3DS caso você tenha injetado tokens VBV (Verified by Visa/Mastercard).
+    </ParamField>
   </Expandable>
 </ParamField>
 
@@ -96,6 +151,7 @@ Se o `paymentMethod` escolhido foi `"CREDIT_CARD"`, as propriedades do cartão s
 A resposta varia ligeiramente dependendo do método de pagamento escolhido. A API sempre tentará devolver um `201 Created`.
 
 ### Sucesso: Criação de PIX
+
 ```json
 {
   "id": "payin_12345",
@@ -112,6 +168,7 @@ A resposta varia ligeiramente dependendo do método de pagamento escolhido. A AP
 ```
 
 ### Sucesso: Criação de Boleto
+
 ```json
 {
   "id": "payin_12346",
@@ -123,12 +180,13 @@ A resposta varia ligeiramente dependendo do método de pagamento escolhido. A AP
   "createdAt": "2026-03-02T12:05:00.000Z",
   "boleto": {
     "barcode": "34191.09008 00000.000004 00000.000006 1 800000000010000",
-    "url": "https://adquirente.legacyecom.com.br/boleto/12346"
+    "url": "https://adquirente.holdinglegacy.io/boleto/12346"
   }
 }
 ```
 
 ### Sucesso: Cartão de Crédito
+
 ```json
 {
   "id": "payin_12347",
