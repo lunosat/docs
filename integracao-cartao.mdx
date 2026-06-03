@@ -1,0 +1,90 @@
+---
+title: "Pagamento com Cartão (Visão Geral)"
+description: "Como integrar pagamentos com cartão usando o SDK LegacyPay: tokenização, 3D Secure e antifraude — mantendo PAN/CVV fora do seu servidor."
+icon: "credit-card"
+---
+
+A Legacy processa pagamentos com cartão **somente via API**, com a parte sensível (número do cartão, CVV) tratada no navegador do comprador pelo **SDK LegacyPay (`legacy-pay.js`)**. O fluxo tem três camadas, todas orquestradas pelo SDK:
+
+- **Tokenização** — transforma os dados do cartão em um token opaco (`cvt_*`). Veja [Tokenização](/tokenizacao).
+- **3D Secure (3DS)** — autentica o portador do cartão (SMS, biometria, app do banco). Veja [3D Secure](/3ds).
+- **Antifraude** — coleta um device fingerprint do comprador. Veja [Antifraude](/antifraude).
+
+O cartão real **nunca passa pelo seu servidor** — apenas o navegador do comprador e a LegacyPay enxergam os dados completos. Seu backend só recebe e usa o token (`cvt_*`) ao chamar [`POST /payin`](/api-reference/payins/create).
+
+<Warning>
+  **Sucesso do SDK ≠ venda aprovada.** Quando o SDK conclui a tokenização/3DS, isso significa apenas que o portador foi autenticado — não que a venda foi aprovada. Confirme sempre o status real por **webhook** (status `APPROVED`) ou consultando `GET /payin/{id}`.
+</Warning>
+
+---
+
+## Importando o SDK
+
+O script é servido pela própria API da Legacy:
+
+```html
+<script src="https://api.holdinglegacy.io/checkout/sdk/legacy-pay.js"></script>
+<script>
+  var client = LegacyPay.init({
+    publicKey: "pk_live_xxx",
+    apiBaseUrl: "https://api.holdinglegacy.io"
+  });
+</script>
+```
+
+A `publicKey` (`pk_live_*` ou `pk_test_*`) é segura para ficar exposta no navegador. **Nunca** coloque a `sk_live_*` no front-end.
+
+<Tip>
+  Versões disponíveis em `/checkout/sdk/`: `legacy-pay.js` (legível), `legacy-pay.min.js` (produção) e `legacy-pay.d.ts` (tipos TypeScript).
+</Tip>
+
+---
+
+## Fluxo ponta a ponta
+
+<Steps>
+  <Step title="Carregue o SDK e descubra as capacidades da loja">
+    ```js
+    var config = await client.getConfig();
+    // config.capabilities = {
+    //   tokenization: { enabled, mode, cardOnFile, cvvRequired },
+    //   threeDS:      { enabled, mode },
+    //   antifraud:    { enabled, mode }
+    // }
+    ```
+  </Step>
+  <Step title="Prepare o pagamento no navegador">
+    `prepareCardPayment()` tokeniza o cartão e executa 3DS + antifraude automaticamente.
+    ```js
+    var prepared = await client.prepareCardPayment({
+      amount: 9900,
+      installments: 1,
+      referenceId: "pedido-123",
+      card: { holderName, number, expirationMonth, expirationYear, cvv },
+      customer: { name, email, document, phone, address }
+    });
+    var payload = client.buildPayinPayload({
+      amount: 9900, referenceId: "pedido-123", payerIp: ipDoComprador,
+      isPhysicalProduct: false, customer, items
+    }, prepared);
+    ```
+  </Step>
+  <Step title="Envie o payload para o SEU backend">
+    Nunca chame `/payin` direto do navegador (exige `sk_live`). Encaminhe o `payload` para o seu servidor.
+  </Step>
+  <Step title="Crie o Payin no seu backend">
+    Com Basic Auth (`pk` + `sk`), chame [`POST /payin`](/api-reference/payins/create) com o `card.token` e o `antifraud.sessionId` do payload.
+  </Step>
+  <Step title="Confirme a venda de forma assíncrona">
+    Aguarde o [webhook](/webhooks) com `status: "APPROVED"` ou consulte `GET /payin/{id}`.
+  </Step>
+</Steps>
+
+---
+
+## Fluxos de 3DS
+
+O SDK é **agnóstico de adquirente** — o mesmo `legacy-pay.js` atende todas as lojas, e os detalhes de qual provedor está atrás não são expostos ao integrador. O 3DS pode acontecer de duas formas, de forma transparente para você:
+
+- **Pré-ordem:** a autenticação acontece no navegador durante `prepareCardPayment()` e os dados (`cavv`/`eci`/`referenceId`) já vão embutidos no `/payin`.
+- **Pós-ordem:** o desafio é decidido após o `/payin`; a resposta vem com `status: "PENDING_3DS"` e os campos do desafio, concluídos via `client.handlePendingThreeDS()`. Veja [3D Secure](/3ds).

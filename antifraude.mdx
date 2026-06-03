@@ -1,0 +1,74 @@
+---
+title: "Antifraude"
+description: "Como o SDK LegacyPay coleta o device fingerprint do comprador automaticamente e correlaciona com a transação."
+icon: "shield-check"
+---
+
+<Note>
+  **Pré-requisito:** este guia assume que você já carregou o `legacy-pay.js` e inicializou o `client`. Se ainda não fez isso, veja [Tokenização de Cartões](/tokenizacao).
+</Note>
+
+O antifraude do LegacyPay coleta um **device fingerprint** — características anônimas do navegador e dispositivo do comprador, como resolução de tela, fontes instaladas, fuso horário — durante o checkout, e usa esse dado para decidir se aprova, recusa ou manda a transação para revisão manual.
+
+Tudo isso é orquestrado pelo **SDK LegacyPay (`legacy-pay.js`)**. Você não precisa carregar scripts adicionais, mexer em headers ou enviar nada manualmente — o SDK detecta a configuração da loja e age sozinho.
+
+---
+
+## Verificar se antifraude está ativo
+
+```js
+var config = await client.getConfig();
+// config.capabilities.antifraud = {
+//   enabled: true,
+//   mode: "sdk"
+// }
+```
+
+Quando `enabled: false`, nenhum script de coleta é carregado e nenhum identificador de fraude é enviado nas transações.
+
+---
+
+## Comportamento padrão
+
+Quando você chama `client.processCardPayment()` ou `client.prepareCardPayment()`, o SDK verifica se a adquirente configurada exige antifraude. Se exigir, o coletor de fingerprint roda automaticamente antes da autenticação. Se não exigir, o passo é ignorado sem nenhuma ação.
+
+```js
+var prepared = await client.prepareCardPayment({ amount, card, customer });
+// Se a adquirente exige antifraude, prepared.antifraud.sessionId estará preenchido.
+// Se não exige, prepared.antifraud.skipped === true.
+```
+
+Você não vê nada disso explicitamente — o resultado já chega embutido em `prepared.payinCard` para o `/payin` (campo `antifraud.sessionId`).
+
+---
+
+## O que acontece com cada transação
+
+Cada chamada ao `/payin` envia um identificador **fresco** de antifraude — não há reuso entre transações. Isso significa:
+
+- Cada cobrança é avaliada individualmente.
+- Re-cobranças (card-on-file) também passam por uma nova coleta antes do `/payin` (se a loja tiver antifraude ativo).
+- Você não precisa gerenciar IDs nem armazenar nada do antifraude no seu servidor.
+
+---
+
+## Análise de risco no servidor
+
+Além do device fingerprint, a plataforma aplica um motor de **análise de risco** server-side por empresa. Regras configuráveis (faixa de valor, método de pagamento, janela de tempo, ou retenção total) podem colocar uma transação aprovada em **revisão manual**: o payin fica com `status: "PENDING"` e um registro de revisão é criado. Um operador então **aprova** (libera o payin) ou **recusa/estorna** pelo painel administrativo. Isso é transparente para o integrador — basta acompanhar o status final via [webhook](/webhooks).
+
+---
+
+## Falha do antifraude não interrompe o pagamento
+
+Se a coleta falhar (bloqueador de scripts, sem rede, navegador hostil), o SDK loga um aviso no console e continua o fluxo. A transação segue sem identificador de antifraude — ela ainda pode passar pelas demais regras de aprovação da loja, mas o score de risco será menor.
+
+Você não precisa tratar esse cenário com código especial. Não há `LegacyPayError` específico para falha de antifraude.
+
+---
+
+## Resumindo
+
+- **Não carregue scripts manualmente** — `legacy-pay.js` faz isso sozinho.
+- **Não envie `antifraud.sessionId` no `/payin`** se você está usando `processCardPayment` — o SDK monta o payload completo.
+- **Não trate falhas de antifraude** — elas são silenciosas e não bloqueiam o pagamento.
+- **Acompanhe o status final via webhook** — uma transação pode ficar em `PENDING` aguardando revisão manual de risco.

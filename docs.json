@@ -33,6 +33,15 @@
               "webhooks",
               "status"
             ]
+          },
+          {
+            "group": "Pagamento com Cartão",
+            "pages": [
+              "integracao-cartao",
+              "tokenizacao",
+              "3ds",
+              "antifraude"
+            ]
           }
         ]
       },

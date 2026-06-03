@@ -1,0 +1,216 @@
+---
+title: "Tokenização de Cartões"
+description: "Como o SDK LegacyPay transforma dados de cartão em um token seguro (cvt_*) reutilizável, mantendo PAN/CVV fora do seu servidor."
+icon: "shield-halved"
+---
+
+A tokenização transforma os dados sensíveis do cartão (PAN, CVV, portador) em um **token opaco** (`cvt_*`) que você usa no lugar do cartão para criar pagamentos. O cartão real nunca passa pelo seu servidor — só o navegador do comprador e a LegacyPay enxergam os dados completos.
+
+Com o token você:
+
+- Cria transações em `/payin` sem nunca tocar em PAN/CVV.
+- Cobra o mesmo cliente novamente (card-on-file) sem precisar guardar cartão.
+- Permite que o comprador escolha entre cartões salvos em uma próxima compra.
+
+Tudo isso é gerenciado pelo **SDK LegacyPay (`legacy-pay.js`)** — você não precisa conhecer nem chamar nenhuma rota interna da plataforma.
+
+---
+
+## Importando o SDK
+
+```html
+<script src="https://api.holdinglegacy.io/checkout/sdk/legacy-pay.js"></script>
+<script>
+  var client = LegacyPay.init({
+    publicKey: "pk_live_xxx",
+    apiBaseUrl: "https://api.holdinglegacy.io"
+  });
+</script>
+```
+
+A `publicKey` (`pk_live_*` ou `pk_test_*`) é segura para ficar exposta no navegador. **Nunca** coloque a `sk_live_*` no front-end.
+
+---
+
+## Criar token a partir do cartão
+
+```js
+var tokenized = await client.tokenizeCard({
+  amount: 9900,
+  installments: 1,
+  referenceId: "pedido-123",
+  card: {
+    holderName: "MARIA OLIVEIRA",
+    number: "4111111111111111",
+    expirationMonth: "12",
+    expirationYear: "2028",
+    cvv: "123"
+  },
+  customer: {
+    name: "Maria Oliveira",
+    document: "12345678909",
+    email: "maria@email.com",
+    phone: "11988887777",
+    address: {
+      street: "Av Paulista",
+      number: "1000",
+      zipCode: "01310100",
+      city: "São Paulo",
+      state: "SP"
+    }
+  }
+});
+```
+
+Resposta:
+
+```json
+{
+  "token": "cvt_live_5XY8...",
+  "source": "tokenized",
+  "brand": "visa",
+  "last4": "1111",
+  "bin": "411111",
+  "expiresAt": "2028-12-31T23:59:59.000Z"
+}
+```
+
+<Note>
+  **`tokenizeCard()` faz tokenização pura** — não executa 3DS nem antifraude. Use `prepareCardPayment()` para o fluxo completo com 3DS e antifraude. Veja [3D Secure](/3ds).
+</Note>
+
+---
+
+## Usar o token no `/payin`
+
+Esse passo é feito **no seu backend**, com Basic Auth (`pk` + `sk`):
+
+```bash
+POST https://api.holdinglegacy.io/payin
+Authorization: Basic base64(pk_live_...:sk_live_...)
+
+{
+  "paymentMethod": "CREDIT_CARD",
+  "amount": 9900,
+  "referenceId": "pedido-123",
+  "isPhysicalProduct": true,
+  "payerIp": "203.0.113.1",
+  "customer": { /* mesmo customer */ },
+  "items": [{ "title": "Produto", "quantity": 1, "unitPrice": 9900 }],
+  "card": {
+    "token": "cvt_live_5XY8...",
+    "installments": 1
+  }
+}
+```
+
+<Warning>
+  Quando a tokenização é exigida, enviar PAN/CVV bruto no `/payin` retorna `400 INVALID_DATA`. Use sempre o token gerado pelo SDK.
+</Warning>
+
+---
+
+## CVV e PCI-DSS
+
+O CVV é capturado pelo SDK, enviado para a LegacyPay junto com a tokenização, e **nunca persiste em banco**. Ele fica disponível por até **5 minutos** para a primeira `/payin` após a tokenização — depois disso, é descartado.
+
+Para lojas onde o CVV precisa ser informado em cada cobrança (você descobre via `client.getConfig()`, campo `capabilities.tokenization.cvvRequired`), o comprador precisa digitar o CVV novamente em re-cobranças.
+
+---
+
+## Card-on-file (cartões salvos)
+
+Depois que o cliente paga uma primeira vez, o token continua válido até a data de expiração do cartão. Você pode listar cartões salvos do mesmo comprador, cobrar de novo e revogar quando o cliente pedir.
+
+### Listar cartões salvos
+
+```js
+var cards = await client.listSavedCards({ document: "12345678909" });
+// → [
+//     {
+//       token: "cvt_live_...",
+//       brand: "visa",
+//       last4: "1111",
+//       expMonth: 12,
+//       expYear: 2028,
+//       lastUsedAt: "2026-05-10T15:00:00Z",
+//       useCount: 3
+//     }
+//   ]
+```
+
+Use `document` (CPF) — o SDK pede ao backend para identificar o cliente.
+
+### Cobrar com cartão salvo
+
+```js
+var payload = await client.payWithSavedCard({
+  token: "cvt_live_...",
+  cvv: "123",          // pode ser exigido — veja capabilities.tokenization.cvvRequired
+  amount: 9900,
+  referenceId: "pedido-456",
+  installments: 1,
+  customer: { name, email, document, phone }
+});
+// payload já está formatado para você enviar ao /payin no backend.
+```
+
+Se a loja exige CVV em re-cobrança e você não passou, o método lança `LegacyPayError("CVV_REQUIRED", ...)`.
+
+### Revogar cartão
+
+```js
+await client.revokeCard("cvt_live_...", { reason: "customer_request" });
+```
+
+O token sai de `ACTIVE` e a próxima `/payin` que tentar usá-lo é rejeitada.
+
+---
+
+## Detectar capacidades da loja
+
+```js
+var config = await client.getConfig();
+// config.capabilities.tokenization = {
+//   enabled: true,
+//   mode: "backend",
+//   cardOnFile: true,     // re-cobrança sem PAN
+//   cvvRequired: false    // CVV exigido em re-cobrança?
+// }
+```
+
+Cada loja configurada na plataforma tem um perfil próprio — você só consulta o que está disponível. Os detalhes de implementação (qual adquirente está atrás, quais regras de fraude se aplicam) não são expostos ao integrador.
+
+---
+
+## Erros possíveis
+
+| Código (`LegacyPayError.code`) | Quando ocorre |
+| :--- | :--- |
+| `TOKENIZATION_UNSUPPORTED` | Loja não tem tokenização habilitada. Contate o suporte. |
+| `THREEDS_FAILED` | Falha na autenticação 3DS (banco recusou, tempo esgotado, navegador incompatível). |
+| `CVV_REQUIRED` | Loja exige CVV em re-cobrança. Pergunte o CVV ao cliente. |
+| `MISSING_CUSTOMER_KEY` | `listSavedCards` foi chamado sem `customerKey` ou `document`. |
+| `MISSING_TOKEN` | `payWithSavedCard` ou `revokeCard` chamado sem token. |
+
+Detalhe para `/payin` (erros retornados pela API):
+
+| Código HTTP | Erro | Quando ocorre |
+| :--- | :--- | :--- |
+| `400` | `INVALID_DATA` | A tokenização é exigida e o request veio com PAN bruto. Tokenize primeiro. |
+| `409` | `INVALID_DATA` | Já existe uma cobrança em andamento com challenge 3DS aberto para esse token. Aguarde finalizar. |
+
+> Token revogado ou expirado também é rejeitado com `400` ao tentar usá-lo no `/payin`.
+
+---
+
+## Endpoints REST (referência)
+
+O SDK abstrai estas rotas — documentadas aqui apenas para referência. Todas exigem a `publicKey` no header `x-public-key`.
+
+| Método | Rota | Descrição |
+| :--- | :--- | :--- |
+| `POST` | `/checkout/tokenize` | Gera o token (`cvt_*`) a partir do cartão. |
+| `POST` | `/checkout/tokenize/:token/3ds` | Anexa dados de autenticação 3DS a um token. |
+| `GET` | `/checkout/cards` | Lista cartões salvos (`customerKey` ou `document`). |
+| `DELETE` | `/checkout/tokenize/:token` | Revoga um token. |

@@ -111,35 +111,60 @@ Array de objetos especificando o que está sendo comprado e taxado.
 
 ### Card (Cartão de Crédito)
 
-Se o `paymentMethod` escolhido foi `"CREDIT_CARD"`, as propriedades do cartão são **obrigatórias**. Para as formas PIX e Boleto, omitir este objeto por inteiro.
+Se o `paymentMethod` escolhido foi `"CREDIT_CARD"`, o objeto `card` é **obrigatório**. Para PIX e Boleto, omita este objeto por inteiro.
+
+<Tip>
+  **Recomendado:** envie apenas `card.token` (gerado pelo SDK LegacyPay — veja [Tokenização](/tokenizacao)). Com o token, os campos de PAN bruto (`number`, `cvv`, etc.) são preenchidos com segurança pela plataforma e podem ser omitidos. Quando a tokenização é exigida, PAN bruto é rejeitado com `400 INVALID_DATA`.
+</Tip>
 
 <ParamField body="card" type="object">
-  <Expandable title="propriedades de criptografia">
-    <ParamField body="holderName" type="string" required>
-      Nome impresso no plástico do cartão.
+  <Expandable title="propriedades do cartão">
+    <ParamField body="token" type="string">
+      Token opaco do cartão (`cvt_*`) gerado pelo SDK. Quando presente, substitui os campos de PAN bruto abaixo.
     </ParamField>
-     <ParamField body="number" type="string" required>
-      Os dezesseis dígitos ou Token Sensível.
+     <ParamField body="holderName" type="string">
+      Nome impresso no plástico do cartão. Obrigatório quando não houver `token`.
     </ParamField>
-     <ParamField body="expirationMonth" type="string" required>
-      Exemplo: 
-      `08`
+     <ParamField body="number" type="string">
+      Os dezesseis dígitos do cartão. Obrigatório quando não houver `token`.
     </ParamField>
-     <ParamField body="expirationYear" type="string" required>
-      Exemplo: 
-      `2027`
-       ou 
-      `27`
+     <ParamField body="expirationMonth" type="string">
+      Exemplo: `08`. Obrigatório quando não houver `token`.
     </ParamField>
-     <ParamField body="cvv" type="string" required>
-      Três ou quatro dígitos de trás.
+     <ParamField body="expirationYear" type="string">
+      Exemplo: `2027` ou `27`. Obrigatório quando não houver `token`.
+    </ParamField>
+     <ParamField body="cvv" type="string">
+      Três ou quatro dígitos de trás. Pode ser exigido mesmo com `token` (veja `capabilities.tokenization.cvvRequired`).
     </ParamField>
      <ParamField body="installments" type="integer" required>
-      Quantidade de parcelas solicitadas na maquininha sem juros (Ex: 1 a 12).
+      Quantidade de parcelas sem juros (Ex: 1 a 12).
     </ParamField>
 
     <ParamField body="threeDSecure" type="object">
-      Opcional. Contêm métricas de validação 3DS caso você tenha injetado tokens VBV (Verified by Visa/Mastercard).
+      Opcional. Dados de autenticação 3D Secure. Normalmente preenchido automaticamente pelo SDK (`prepareCardPayment()`).
+      <Expandable title="propriedades 3DS">
+        <ParamField body="cavv" type="string">Cardholder Authentication Verification Value retornado pelo banco.</ParamField>
+        <ParamField body="eci" type="string">Electronic Commerce Indicator (Ex: `05`).</ParamField>
+        <ParamField body="xid" type="string">Transaction identifier do fluxo 3DS.</ParamField>
+        <ParamField body="version" type="string">Versão do protocolo 3DS (Ex: `2.2.0`).</ParamField>
+        <ParamField body="referenceId" type="string">Identificador da sessão 3DS (ex.: `operationSessionId` retornado pela sessão de 3DS).</ParamField>
+        <ParamField body="authenticationId" type="string">ID de autenticação emitido pelo provedor de 3DS.</ParamField>
+      </Expandable>
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+---
+
+### Antifraud (Antifraude)
+
+Opcional. Identificador da sessão de device fingerprint coletada pelo SDK. Veja [Antifraude](/antifraude).
+
+<ParamField body="antifraud" type="object">
+  <Expandable title="propriedades">
+    <ParamField body="sessionId" type="string">
+      ID da sessão de fingerprint do comprador para esta transação.
     </ParamField>
   </Expandable>
 </ParamField>
@@ -198,5 +223,49 @@ A resposta varia ligeiramente dependendo do método de pagamento escolhido. A AP
   "amount": 10000,
   "paymentMethod": "CREDIT_CARD",
   "createdAt": "2026-03-02T12:10:00.000Z"
+}
+```
+
+### Pendente: Desafio 3DS (pós-ordem)
+
+Quando a adquirente exige um desafio 3D Secure após a criação do payin, a resposta vem com `status: "PENDING_3DS"` e os campos do desafio. Use o SDK (`client.handlePendingThreeDS()`) para concluir.
+
+```json
+{
+  "id": "payin_12348",
+  "externalId": "tx_998880",
+  "referenceId": "meu-pedido-1237",
+  "status": "PENDING_3DS",
+  "amount": 10000,
+  "paymentMethod": "CREDIT_CARD",
+  "threeDSecurePending": true,
+  "threeDSecureSession": "eyJhbGciOiJIUzI1NiJ9...",
+  "threeDSecureTransactionId": "05a1f7e4-d8c9-4c5e-b2a3-1f2e3d4c5b6a",
+  "threeDSecureSdkUrl": "https://cdn.provider.com/3ds-sdk.min.js",
+  "createdAt": "2026-03-02T12:15:00.000Z"
+}
+```
+
+<Warning>
+  `status: "APPROVED"` na resposta do `/payin` **não** garante liquidação. Confirme sempre a venda final via [webhook](/webhooks) ou `GET /payin/{id}`.
+</Warning>
+
+### Exemplo de request com cartão tokenizado
+
+```json
+{
+  "paymentMethod": "CREDIT_CARD",
+  "amount": 29900,
+  "referenceId": "pedido-003",
+  "isPhysicalProduct": false,
+  "payerIp": "200.100.50.3",
+  "customer": { "name": "João Oliveira", "document": "12345678900", "email": "joao@email.com", "phone": "5511988887777" },
+  "items": [{ "title": "Plano Mensal", "quantity": 1, "unitPrice": 29900 }],
+  "card": {
+    "token": "cvt_live_5XY8...",
+    "installments": 1,
+    "threeDSecure": { "cavv": "jJ2CBDUHAA0CAwECBQYGBAECBAE=", "eci": "05" }
+  },
+  "antifraud": { "sessionId": "mfp_live_abc123xyz" }
 }
 ```

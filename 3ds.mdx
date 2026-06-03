@@ -1,0 +1,123 @@
+---
+title: "Autenticação 3D Secure (3DS)"
+description: "Como o SDK LegacyPay autentica o portador do cartão automaticamente durante a tokenização, sem que você precise lidar com SDKs externos."
+icon: "fingerprint"
+---
+
+<Note>
+  **Pré-requisito:** este guia assume que você já carregou o `legacy-pay.js` e inicializou o `client`. Se ainda não fez isso, veja [Tokenização de Cartões](/tokenizacao).
+</Note>
+
+O **3D Secure (3DS)** adiciona uma camada de autenticação do portador do cartão — geralmente um SMS, biometria ou aprovação no app do banco — antes da transação ser processada. Ele reduz chargebacks e aumenta a taxa de aprovação.
+
+No LegacyPay, **a autenticação 3DS roda automaticamente dentro do `client.prepareCardPayment()`**. Você só precisa carregar o `legacy-pay.js` — nenhum SDK externo de banco ou adquirente é necessário, você não vê desafios no seu código, não monta payloads diferentes para bancos diferentes. Quando o `prepareCardPayment()` retorna com sucesso, o `prepared.payinCard` já contém os dados de autenticação prontos para o `/payin`.
+
+<Warning>
+  **Sucesso do 3DS ≠ venda aprovada.** Quando `prepareCardPayment()` resolve com sucesso (ou `prepared.threeDS.status === "authenticated"`), isso significa **apenas que o portador foi autenticado pelo banco** — **não** que a venda foi aprovada. A aprovação depende da adquirente/antifraude e acontece **depois**, de forma assíncrona. **Nunca exiba "pagamento aprovado" com base no retorno do SDK.**
+
+  Confirme o status real da venda por um destes caminhos:
+  - **Webhook** (recomendado): aguarde o evento com `status: "APPROVED"` — veja [Webhooks](/webhooks).
+  - **Polling**: consulte `GET /payin/{id}` até o status sair de `PENDING`.
+</Warning>
+
+---
+
+## Verificar se 3DS está ativo
+
+Cada loja é configurada com seu próprio perfil de risco. Consulte:
+
+```js
+var config = await client.getConfig();
+// config.capabilities.threeDS = {
+//   enabled: true   // ou false
+// }
+```
+
+Quando `enabled: false`, o `prepareCardPayment()` não dispara desafios — o token é gerado direto.
+
+---
+
+## Como funciona para quem integra
+
+```js
+var client = LegacyPay.init({ publicKey: "pk_live_...", apiBaseUrl: "https://api.holdinglegacy.io" });
+
+try {
+  var prepared = await client.prepareCardPayment({
+    amount: 9900,
+    referenceId: "pedido-123",
+    installments: 1,
+    card: { holderName, number, expirationMonth, expirationYear, cvv },
+    customer: { name, email, document, phone, address }
+  });
+
+  // prepared = {
+  //   payinCard: {
+  //     token: "cvt_live_...",             // PAN nunca sai do SDK
+  //     installments: 1,
+  //     threeDSecure: { cavv: "...", eci: "05" }  // preenchido pelo SDK se 3DS rodou
+  //   },
+  //   antifraud: { skipped: false, sessionId: "mfp-..." },
+  //   card: { token: "cvt_live_...", brand: "visa", last4: "1111" },
+  //   threeDS: { skipped: false, status: "authenticated" }
+  // }
+
+  // buildPayinPayload() mescla os campos base com prepared.payinCard e antifraud.
+  var payload = client.buildPayinPayload({
+    amount: 9900,
+    referenceId: "pedido-123",
+    payerIp: ipDoComprador,
+    isPhysicalProduct: false,
+    customer: { name, email, document, phone, address },
+    items: [{ title: "Produto", quantity: 1, unitPrice: 9900 }]
+  }, prepared);
+
+  // Envie payload para o SEU backend — nunca chame /payin direto do browser (exige sk_live).
+  await fetch("/api/pagamento", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+} catch (err) {
+  if (err.code === "THREEDS_FAILED") {
+    // Mostre uma mensagem amigável e peça outro cartão.
+  }
+}
+```
+
+Durante o `prepareCardPayment()`, o SDK pode abrir um modal/iframe com o desafio do banco. Ele aparece sobre a sua página e fecha sozinho quando o comprador confirma. Você não precisa fazer nada — só esperar a Promise resolver.
+
+---
+
+## Falhas mais comuns
+
+| Causa | Solução |
+| :--- | :--- |
+| Comprador não consegue confirmar o desafio (timeout, código errado, app fechado). | Mostre erro amigável e ofereça outro cartão. |
+| Cartão não suportado pelo emissor para 3DS. | Idem — peça outro cartão. |
+| Navegador sem suporte (popups bloqueados, modo anônimo restritivo). | Oriente o comprador a permitir popups ou trocar de navegador. |
+
+Todas essas situações chegam como `LegacyPayError` com `err.code === "THREEDS_FAILED"`. Você não precisa diferenciar a sub-causa — a UX em todos os casos é a mesma: pedir outro cartão.
+
+---
+
+## Quando o desafio acontece "depois" (pós-ordem)
+
+Em alguns perfis de loja, o desafio 3DS é decidido após o `/payin` ser criado (a análise antifraude pode pedir o desafio só para casos suspeitos). Nessa situação, a resposta de `/payin` virá com `"threeDSecurePending": true`, `"status": "PENDING_3DS"` e os campos planos `threeDSecureSession`, `threeDSecureTransactionId` e `threeDSecureSdkUrl` com os dados do desafio.
+
+**O SDK lida com isso automaticamente quando você usa `client.processCardPayment()`** — ele detecta o `threeDSecurePending`, roda o desafio via `handlePendingThreeDS()` e retoma o fluxo. Se você está montando o `/payin` manualmente, use `client.handlePendingThreeDS(payinResponse, { card, customer, amount, installments })` para completar o desafio.
+
+<Note>
+  Na maioria dos casos o 3DS é **pré-ordem**: a autenticação acontece durante o `prepareCardPayment()` e os dados já vão no `/payin`. O fluxo **pós-ordem** acima vale para perfis que exigem desafio assíncrono. O SDK é agnóstico — você não precisa saber qual modo a loja usa.
+</Note>
+
+---
+
+## Resumindo
+
+- **Não importe nenhum SDK externo** — só `legacy-pay.js`.
+- **Não monte payloads de 3DS** — o SDK monta tudo internamente.
+- **Use `client.prepareCardPayment()`** para tokenizar o cartão e executar o 3DS automaticamente.
+- **Trate `LegacyPayError.code === "THREEDS_FAILED"`** com uma mensagem amigável.
+- **Use `client.processCardPayment()`** se você quer um único método que cuida do `/payin` + desafio pós-ordem.
+- **Confirme a venda via webhook ou `GET /payin/{id}`** — o sucesso do SDK indica só autenticação 3DS, nunca aprovação da venda.
