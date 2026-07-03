@@ -1,12 +1,13 @@
 ---
-title: 'Webhooks'
-description: 'Como receber e tratar notificações em tempo real sobre transações da Legacy.'
-icon: 'webhook'
+title: "Webhooks"
+description: "Como receber e tratar notificações em tempo real sobre transações da Legacy."
+icon: "webhook"
 ---
 
 A Legacy oferece suporte a Webhooks, mecanismo que envia requisições `HTTP POST` diretamente para a sua aplicação toda vez que ocorre uma mudança de evento importante em nossa infraestrutura.
 
 Por exemplo, você pode receber um alerta sempre que:
+
 - O pagamento de um `PIX` for aprovado pelo banco.
 - Um saque (`Payout`) finalizar com sucesso.
 - Um pagamento por Cartão de Crédito virar Chargeback.
@@ -35,6 +36,7 @@ Quando a Legacy enviar um webhook do Payin, nós usaremos o seguinte **Payload**
 ```
 
 ### Possíveis Status do Payin
+
 É aconselhável que o seu sistema saiba lidar de forma fluida com estes retornos:
 
 - `PENDING` - Gerado, aguardando liquidação.
@@ -53,7 +55,7 @@ Para o saque manual efetuado via API, `POST /payout`, a estrutura possui o segui
 ```json
 {
   "id": "payout_98765",
-  "status": "COMPLETED",
+  "status": "APPROVED",
   "amount": 50000,
   "pixKey": "maria@email.com",
   "pixKeyType": "EMAIL",
@@ -61,9 +63,11 @@ Para o saque manual efetuado via API, `POST /payout`, a estrutura possui o segui
   "updatedAt": "2026-03-02T12:30:00.000Z"
 }
 ```
-*Geralmente, um Payout trafegará pelo status `PROCESSING` até consolidar-se em `COMPLETED` ou `FAILED`.*
 
-***
+_Geralmente, um Payout trafegará pelo status `PROCESSING` até consolidar-se em_ `APPROVED `_ou `FAILED`._
+
+---
+
 <Tip>
-Sempre retorne qualquer status HTTP no range `2xx` (Ex: `200 OK`) nos seus controladores de webhook. Se nosso endpoint falhar, tentaremos despachar novamente em janelas crescentes de repetição.
+  Sempre retorne qualquer status HTTP no range `2xx` (Ex: `200 OK`) nos seus controladores de webhook. Se nosso endpoint falhar, tentaremos despachar novamente em janelas crescentes de repetição.
 </Tip>
